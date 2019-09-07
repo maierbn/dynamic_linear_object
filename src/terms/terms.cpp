@@ -22,11 +22,11 @@ double N(int i, double h, double s) {
   return erg;
 }
 double Theta(const vector<double> &thetaN, double h, double s) {
-  //Theta gibt anhand Lineakombination der N+1 Koeffizienten mit den jeweiligen Basisfunktionen
+  //Theta gibt anhand Linearkombination der N+1 Koeffizienten mit den jeweiligen Basisfunktionen
   //den Wert von Theta an der Stelle s zurück
   double erg = 0;
-  size_t i1 = floor(s / h);
-  size_t i2 = ceil(s / h);
+  size_t i1 = s / h;
+  size_t i2 = i1+1;
   if (i1 >= 0 && i1 <= thetaN.size() - 1) {
     double erg2 = N(i1, h, s);
     erg = erg + thetaN[i1] * erg2;
@@ -38,44 +38,64 @@ double Theta(const vector<double> &thetaN, double h, double s) {
   return erg;
 
 }
+
+double CosIntIntegrand(double x, int i, double h, const vector<double> &thetaN) {
+  //Berechnet den Integranden für CosInt
+  return cos(Theta(thetaN,h,x))*N(i,h,x);
+}
+
 double CosInt(int i, double s, double h, const vector<double> &thetaN,
     int iter) {
   //Berechnet das Integral über den Cosinus von Theta multipliziert mit der i-ten Basisfunktion
   double x1 = max(i - 1.0, 0.0) * h;
   double x2 = min((i + 1.0) * h, s);
 
-  return Integral([i,h,thetaN](double x) {
-    return cos(Theta(thetaN,h,x))*N(i,h,x);
-  }, x1, x2, iter);
+  return Integral(CosIntIntegrand, x1, x2, iter,
+                  i, h, thetaN);
 
   /*
    return Integral([i,h,thetaN](double x) {
    return cos(Theta(thetaN,h,x))*N(i,h,x);
    }, 0, s, iter);*/
 }
+
+double SinIntIntegrand(double x, int i, double h, const vector<double> &thetaN) {
+  //Berechnet den Integranden für SinInt
+  return sin(Theta(thetaN,h,x))*N(i,h,x);
+}
+
 double SinInt(int i, double s, double h, const vector<double> &thetaN,
     int iter) {
   //Berechnet das Integral über den Sinus von Theta multipliziert mit der i-ten Basisfunktion
 
   double x1 = max(i - 1.0, 0.0) * h;
   double x2 = min((i + 1.0) * h, s);
-  return Integral([i,h,thetaN](double x) {
-    return sin(Theta(thetaN,h,x))*N(i,h,x);
-  }, x1, x2, iter);
+  return Integral(SinIntIntegrand, x1, x2, iter,
+                  i, h, thetaN);
   /*
    return Integral([i,h,thetaN](double x) {
    return sin(Theta(thetaN,h,x))*N(i,h,x);
    }, 0, s, iter);*/
 }
+
+double mIntegrand(double x, int i, int k, double h, int iter, const vector<double> &thetaN)
+{
+  return SinInt( i,x,h,thetaN,iter)*SinInt( k,x,h,thetaN,iter)+CosInt( i,x,h,thetaN,iter)*CosInt( k,x,h,thetaN,iter);
+}
+
 double m(int i, int k, double rho, double h, const vector<double> &thetaN,
     double l, int iter) {
   //Berechnet den Wert m_(i,k) aus Gleichung 14
   return rho
-      * Integral(
-          [i,k,h,iter,thetaN](double x) {
-            return SinInt( i,x,h,thetaN,iter)*SinInt( k,x,h,thetaN,iter)+CosInt( i,x,h,thetaN,iter)*CosInt( k,x,h,thetaN,iter);
-          }, 0, l, iter);
+      * Integral(mIntegrand, 0, l, iter,
+                 i,k,h,iter,thetaN);
 }
+
+double dSinIntIntegrand(double x, int i, int r, double h, const vector<double> &thetaN)
+{
+  return cos(Theta(thetaN,h,x))*N(i,h,x)*N(r,h,x);
+}
+
 double dSinInt(int i, int r, double s, double h, const vector<double> &thetaN,
     int iter) {
   //Berechnet die Ableitung der Funktion SInInt  nach thetar
@@ -83,9 +103,8 @@ double dSinInt(int i, int r, double s, double h, const vector<double> &thetaN,
   if (abs(r - i) <= 1 && s > (r - 1) * h && s > (i - 1) * h) {
     double x1 = max(min(r, i) - 1.0, 0.0) * h;
     double x2 = min((max(r, i) + 1.0) * h, s);
-    return Integral([i,r,h,thetaN](double x) {
-      return cos(Theta(thetaN,h,x))*N(i,h,x)*N(r,h,x);
-    }, x1, x2, iter);
+    return Integral(dSinIntIntegrand, x1, x2, iter,
+                    i,r,h,thetaN);
   } else {
     return 0.0;
   }
@@ -94,6 +113,12 @@ double dSinInt(int i, int r, double s, double h, const vector<double> &thetaN,
    return cos(Theta(thetaN,h,x))*N(i,h,x)*N(r,h,x);
    }, 0, s, iter);*/
 }
+
+double dCosIntIntegrand(double x, int i, int r, double h, const vector<double> &thetaN)
+{
+  return -sin(Theta(thetaN,h,x))*N(i,h,x)*N(r,h,x);
+}
+
 double dCosInt(int i, int r, double s, double h, const vector<double> &thetaN,
     int iter) {
   //Berechnet die Ableitung der Funktion CosInt nach thetar
@@ -102,9 +127,8 @@ double dCosInt(int i, int r, double s, double h, const vector<double> &thetaN,
     double x1 = max(min(r, i) - 1.0, 0.0) * h;
     double x2 = min((max(r, i) + 1.0) * h, s);
 
-    return Integral([i,r,h,thetaN](double x) {
-      return -sin(Theta(thetaN,h,x))*N(i,h,x)*N(r,h,x);
-    }, x1, x2, iter);
+    return Integral(dCosIntIntegrand, x1, x2, iter,
+                    i,r,h,thetaN);
 
   } else {
     return 0.0;
@@ -113,6 +137,12 @@ double dCosInt(int i, int r, double s, double h, const vector<double> &thetaN,
    return -sin(Theta(thetaN,h,x))*N(i,h,x)*N(r,h,x);
    }, 0, s, iter);*/
 }
+
+double AIntegrand(double x, int i, int r, int k, double h, vector<double> &thetaN, int iter)
+{
+  return dSinInt(i,r,x,h,thetaN,iter)*SinInt(k,x,h,thetaN,iter);
+}
+
 vector<vector<vector<double>>> A(double l, double h, int n,
     vector<double> &thetaN, int iter) {
   //Berechnet für alle i,k,r das Integral über dSinInt(i,r)*SinInt(k) zur Wiederverwendung
@@ -131,16 +161,20 @@ vector<vector<vector<double>>> A(double l, double h, int n,
           out[i][k][r] = out[r][k][i];
         } else {
           out[i][k][r] =
-              Integral(
-                  [i,r,k,h,thetaN,iter](double x) {
-                    return dSinInt(i,r,x,h,thetaN,iter)*SinInt(k,x,h,thetaN,iter);
-                  }, 0, l, iter);
+              Integral(AIntegrand, 0, l, iter,
+                       i,r,k,h,thetaN,iter);
         }
       }
     }
   }
   return out;
 }
+
+double BIntegrand(double x, int i, int r, int k, double h, vector<double> &thetaN, int iter)
+{
+  return dCosInt(i,r,x,h,thetaN,iter)*CosInt(k,x,h,thetaN,iter);
+}
+
 vector<vector<vector<double>>> B(double l, double h, int n,
     vector<double> &thetaN, int iter) {
   //Berechnet für alle i,k,r das Integral über dCosInt(i,r)*CosInt(k) zur Wiederverwendung
@@ -159,16 +193,15 @@ vector<vector<vector<double>>> B(double l, double h, int n,
           out[i][k][r] = out[r][k][i];
         } else {
           out[i][k][r] =
-              Integral(
-                  [i,r,k,h,thetaN,iter](double x) {
-                    return dCosInt(i,r,x,h,thetaN,iter)*CosInt(k,x,h,thetaN,iter);
-                  }, 0, l, iter);
+              Integral(BIntegrand, 0, l, iter,
+                       i,r,k,h,thetaN,iter);
         }
       }
     }
   }
   return out;
 }
+
 vector<vector<double>> K(int n, double RFlex, double h)
 //Berechnet die Steifigkeitsmatrix des Kabels mit N Stützstellen mit Abstand h und der Steifigkeit RFlex
     {
@@ -193,11 +226,13 @@ vector<vector<double>> K(int n, double RFlex, double h)
   }
   return out;
 }
+
 double dm(int i, int k, int r, double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B) {
   //Berechnet die Ableitung der Funktion m(i,k) nach Theta_r
   return rho * (A[i][k][r] + A[k][i][r] + B[i][k][r] + B[k][i][r]);
 }
+
 double Z(int r, int k, vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B) {
@@ -211,6 +246,7 @@ double Z(int r, int k, vector<double> &thetaN, vector<double> &thetaNp,
   }
   return temp;
 }
+
 double Y(int r, int k, vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B) {
@@ -246,6 +282,7 @@ vector<vector<double>> mM(double rho, double h, vector<double> &thetaN,
   }
   return out;
 }
+
 vector<vector<double>> mZ(vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B) {
@@ -272,6 +309,7 @@ vector<vector<double>> mZ(vector<double> &thetaN, vector<double> &thetaNp,
   }
   return out;
 }
+
 vector<vector<double>> mY(vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B) {
@@ -294,6 +332,7 @@ vector<vector<double>> mY(vector<double> &thetaN, vector<double> &thetaNp,
   }
   return out;
 }
+
 double V(int r, int j, vector<double> &thetaN, vector<double> &thetaNp,
     int iter, double h, double mu, double t, double rho) {
   //Berechnet den Wert V aus Gleichung 33
@@ -327,6 +366,7 @@ double V(int r, int j, vector<double> &thetaN, vector<double> &thetaNp,
 
   return out;
 }
+
 vector<vector<double>> mV(vector<double> &thetaN, vector<double> &thetaNp,
     double h, double l, double mu, double t, int iter, double rho) {
   vector<vector<double>> out;
@@ -348,6 +388,7 @@ vector<vector<double>> mV(vector<double> &thetaN, vector<double> &thetaNp,
   }
   return out;
 }
+
 double u(int r, vector<double> &thetaN, vector<double> &thetaNp, int iter,
     double h, double mu, double t, double rho) {
   //Berechnet den Wert u aus Gleichung 34
@@ -380,6 +421,7 @@ double u(int r, vector<double> &thetaN, vector<double> &thetaNp, int iter,
 
   return out;
 }
+
 vector<double> uVek(vector<double> &thetaN, vector<double> &thetaNp, double h,
     double l, double mu, double t, int iter, double rho) {
   //Berechnet den Vektor u mit ui= u(i,...)
@@ -395,6 +437,12 @@ vector<double> uVek(vector<double> &thetaN, vector<double> &thetaNp, double h,
   }
   return out;
 }
+
+double verschVekIntegrand(double x, int i, double h, vector<double> &thetaN, int iter, double l, double t)
+{
+  return -SinInt(i,x,h,thetaN,iter)*ddversch(x,t)[0]+CosInt(i,x,h,thetaN,iter)*ddversch(x,t)[1];
+}
+
 vector<double> verschVek(vector<double> &thetaN, vector<double> &thetaNp,
     double h, double l, double t, double rho, int iter) {
   //Berechnet den Vektor v aus Gleichung 25
@@ -403,13 +451,12 @@ vector<double> verschVek(vector<double> &thetaN, vector<double> &thetaNp,
   out.resize(imax);
   for (int i = 0; i < imax; ++i) {
     out[i] =
-        Integral(
-            [i,h,thetaN,iter,l,t](double x) {
-              return -SinInt(i,x,h,thetaN,iter)*ddversch(x,t)[0]+CosInt(i,x,h,thetaN,iter)*ddversch(x,t)[1];
-            }, 0, l, iter);
+        Integral(verschVekIntegrand, 0, l, iter,
+                 i,h,thetaN,iter,l,t);
   }
   return out;
 }
+
 vector<vector<double>> convertMMatrix(vector<vector<double>> A) {
   //Verändert die Massenmatrix so, dass sich der erste Winkel nur aus der gegebenen Funktion berechnet
   size_t n = A.size();

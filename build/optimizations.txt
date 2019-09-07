@@ -1,0 +1,9 @@
+start: 39.49
+no lambdas: 82s
+removed division and floor/ceil: 65s
+
+  size_t i1 = floor(s / h);
+  size_t i2 = ceil(s / h);
+->  
+  size_t i1 = s / h;
+  size_t i2 = i1+1;

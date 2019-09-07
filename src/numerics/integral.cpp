@@ -1,5 +1,6 @@
 #include "numerics/integral.h"
-
+/*
+// diese Funktion wird nicht verwendet, stattdessen die Version in integral.h
 double Integral(const function<double(double)> &f, double x0, double xend,
     int iter)
 //Simpsonsumme zur Berechnung des Integrals der Funktion f(x) von x0 bis xend
@@ -16,3 +17,4 @@ double Integral(const function<double(double)> &f, double x0, double xend,
   return erg;
 
 }
+*/

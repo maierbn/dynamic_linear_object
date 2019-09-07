@@ -57,5 +57,6 @@ void finish(time_t t1, string path) {
   }
   time_t t2 = time(0) - t1;
   file << t2;
+  cout << t2 << "s" << endl;
 
 }
