@@ -43,7 +43,7 @@ double Reibf(double s, double h, double rho) {
     return 0.0;
   }
   return 30-(s-0.5)*40;*/
-  return 10.0;
+  return 9.81 * rho * h;
 }
 double theta0(double t) {
   //Gibt den aktuellen aufgebrachten Winkel im Ursprung zum Zeitpunkt t an

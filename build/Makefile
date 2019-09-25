@@ -3,17 +3,17 @@
 ALGLIB_FILES = \
 alglibinternal.cpp \
 alglibmisc.cpp \
-ap.cpp \
-dataanalysis.cpp \
-diffequations.cpp \
-fasttransforms.cpp \
-integration.cpp \
-interpolation.cpp \
-linalg.cpp \
-optimization.cpp \
 solvers.cpp \
-specialfunctions.cpp \
-statistics.cpp
+ap.cpp \
+linalg.cpp \
+#dataanalysis.cpp \
+#diffequations.cpp \
+#fasttransforms.cpp \
+#integration.cpp \
+#interpolation.cpp \
+#optimization.cpp \
+#specialfunctions.cpp \
+#statistics.cpp
 
 # specify the source files for the own project, these have to be in directory ../src
 FILES = \
@@ -29,7 +29,7 @@ utility/operators.cpp \
 utility/utility.cpp
 
 # specify additional flags for the C++ compiler, C++ standard 14 and include path to search for the #include directives
-CXXFLAGS += -std=c++17 -I../src
+CXXFLAGS += -std=c++17 -I../src -fopenmp
 
 # specify additional flags for the linker, -pg adds information for gprof, -g adds debugging symbols such that gprof knows the code lines (does not slow down program)
 LDFLAGS += -pg -g

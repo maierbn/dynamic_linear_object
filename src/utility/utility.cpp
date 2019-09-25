@@ -3,6 +3,8 @@
 #include <iostream>
 #include <fstream>
 
+#include "terms/problem_definition.h"
+
 void plotteMatrix(vector<vector<double>> &Matrix) {
 //Plottet eine MxN Matrix
   int imax = Matrix.size();
@@ -16,19 +18,18 @@ void plotteMatrix(vector<vector<double>> &Matrix) {
 
 }
 
-void save(vector<double> &x, string path) {
+void save(vector<double> &x, double t, string path) {
   //Speichert den Vektor x in einer csv Datei am Ort path
   ofstream file;
   file.open(path.c_str(), ios::out | ios::app);
   if (!file.is_open()) {
-    cout << "Datei konnte nicht geöffnet werden" << endl;
+    cout << "Datei \"" << path << "\" konnte nicht geöffnet werden" << endl;
     return;
   }
+  vector<double> verschiebung = versch(0,t);
+  file << t << "," << verschiebung[0] << "," << verschiebung[1] << "," << theta0(t);
   for (size_t i = 0; i < x.size(); ++i) {
-    if (i != 0) {
-      file << ",";
-    }
-    file << x[i];
+    file << "," << x[i];
   }
   file << "\n";
 
@@ -39,12 +40,31 @@ void save(double &x, string path) {
   ofstream file;
   file.open(path.c_str(), ios::out | ios::app);
   if (!file.is_open()) {
-    cout << "Datei konnte nicht geöffnet werden" << endl;
+    cout << "Datei \"" << path << "\" konnte nicht geöffnet werden" << endl;
     return;
   }
 
   file << x << "\n";
+  file.close();
+}
 
+void save(int n, double Rflex, double L, double rho, double mu,
+          int iter, bool ver, bool reib, bool winkelkontrolle, string path)
+{
+  //Speichert die Werte in der csv Datei am Ort path
+  ofstream file;
+  file.open(path.c_str(), ios::out | ios::app);
+  if (!file.is_open()) {
+    cout << "Datei \"" << path << "\" konnte nicht geöffnet werden" << endl;
+    return;
+  }
+
+  file << n << "," << Rflex << "," << L << "," << rho << "," << mu << ","
+    << iter << "," << ver << "," << reib << "," << winkelkontrolle << ","
+    << t00 << "," << t01 << "," << t02 << "," << vx1 << "," << vy1 << ","
+    << vx2 << "," << vy2 << "\n";
+
+  file.close();
 }
 
 void finish(time_t t1, string path) {
@@ -52,11 +72,12 @@ void finish(time_t t1, string path) {
   ofstream file;
   file.open(path.c_str(), ios::out | ios::app);
   if (!file.is_open()) {
-    cout << "Datei konnte nicht geöffnet werden" << endl;
+    cout << "Datei \"" << path << "\" konnte nicht geöffnet werden" << endl;
     return;
   }
   time_t t2 = time(0) - t1;
   file << t2;
-  cout << t2 << "s" << endl;
+  file.close();
 
+  cout << "Dauer: " << t2 << " s" << endl;
 }

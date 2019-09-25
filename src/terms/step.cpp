@@ -13,33 +13,34 @@ vector<double> step(int n, double Rflex, double L, double rho, double mu,
   vector<double> temp(n + 1);
   vector<double> erg(n + 1);
   double h = L / n;
+  double hInv = 1.0 / h;
   if (winkelkontrolle) {
     thetaN[0] = theta0(t);
     thetaNp[0] = theta0p(t);
   }
-  Km = K(n, Rflex, h);
-  Am = A(L, h, n, thetaN, iter);
-  Bm = B(L, h, n, thetaN, iter);
+  Km = K(n, Rflex, h, hInv);
+  Am = A(L, h, hInv, n, thetaN, iter);
+  Bm = B(L, h, hInv, n, thetaN, iter);
   Zm = mZ(thetaN, thetaNp, rho, Am, Bm);
   Ym = mY(thetaN, thetaNp, rho, Am, Bm);
 
   temp = temp - (multipl(Km, thetaN)) + (multipl(Zm, thetaNp))
       + (multipl(Ym, thetaNp));
   if (reib) {
-    Vm = mV(thetaN, thetaNp, h, L, mu, t, iter, rho);
+    Vm = mV(thetaN, thetaNp, h, hInv, L, mu, t, iter, rho);
 
     temp = temp + multipl(Vm, thetaNp);
     if (ver) {
-      uv = uVek(thetaN, thetaNp, h, L, mu, t, iter, rho);
+      uv = uVek(thetaN, thetaNp, h, hInv, L, mu, t, iter, rho);
 
       temp = temp + uv;
     }
   }
   if (ver) {
-    verschv = verschVek(thetaN, thetaNp, h, L, t, rho, iter);
+    verschv = verschVek(thetaN, thetaNp, h, hInv, L, t, rho, iter);
     temp = temp - verschv;
   }
-  vector<vector<double>> Mm = mM(rho, h, thetaN, L, iter);
+  vector<vector<double>> Mm = mM(rho, h, hInv, thetaN, L, iter);
   if (winkelkontrolle) {
     Mm = convertMMatrix(Mm);
     temp[0] = theta0pp(t);

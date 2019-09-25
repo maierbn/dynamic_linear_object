@@ -11,15 +11,16 @@
 void euler(int n, double Rflex, double L, double rho, double mu, bool ver,
     bool reib, bool winkelkontrolle, vector<double> thetaNstart,
     const vector<double> thetaNpstart, int iter, double t0, string path,
-    string path2, int wdh, double tend) {
+    string path2, double dt, double tend) {
   //Explizites Euler Verfahren zur Lösung der ODE
-  double dt = tend / wdh;
+
+  int wdh = (tend - t0) / dt;   // Anzahl Iterationen
+  dt = (tend - t0) / wdh;
   double t = t0;
   vector<double> thetaNtemp = thetaNstart;
   vector<double> thetaNptemp = thetaNpstart;
   vector<double> omega(n + 1);
-  save(thetaNtemp, path);
-  save(t, path2);
+  save(thetaNtemp, t, path);
   cout << 100 * (t - t0) / (tend - t0) << "%" << endl;
   for (int var = 0; var < wdh; ++var) {
     omega = step(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle,
@@ -32,33 +33,38 @@ void euler(int n, double Rflex, double L, double rho, double mu, bool ver,
       thetaNtemp[0] = theta0(t);
       thetaNptemp[0] = theta0p(t);
     }
-    save(thetaNtemp, path);
-    save(t, path2);
+    save(thetaNtemp, t, path);
     cout << 100 * (t - t0) / (tend - t0) << "%" << endl;
 
   }
   double h = L / n;
-  save(h, path2);
+  save(h, path);
 
 }
 
 void rungeKutta4(int n, double Rflex, double L, double rho, double mu, bool ver,
     bool reib, bool winkelkontrolle, vector<double> thetaNstart,
     const vector<double> thetaNpstart, int iter, double t0, string path,
-    string path2, int wdh, double tend) {
+    string path2, double dt, double tend) {
   //Runge-Kutta-4 Verfahren zur Lösung der ODE
 
-  double dt = (tend - t0) / wdh;
+  int wdh = (tend - t0) / dt;   // Anzahl Iterationen
+  dt = (tend - t0) / wdh;
+  int saveFreq = max(1.0,0.01/dt);    // Schreibe Datei alle 0.01 Simulations-Sekunden
   double t = t0;
   vector<double> thetaNtemp = thetaNstart;
   vector<double> thetaNptemp = thetaNpstart;
   vector<double> temp(n + 1);
   vector<double> tempp(n + 1);
-  save(thetaNtemp, path);
-  save(t, path2);
-  cout << 100 * (t - t0) / (tend - t0) << "%" << endl;
-
   for (int var = 0; var < wdh; ++var) {
+
+    if (var % 100 == 0)
+    {
+      cout << 100 * (t - t0) / (tend - t0) << "%" << endl;
+    }
+    if (var % saveFreq == 0)
+      save(thetaNtemp, t, path);
+
     k1 = thetaNptemp;
     k1p = step(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaNtemp,
         thetaNptemp, iter, t, path);
@@ -90,13 +96,11 @@ void rungeKutta4(int n, double Rflex, double L, double rho, double mu, bool ver,
       thetaNtemp[0] = theta0(t);
       thetaNptemp[0] = theta0p(t);
     }
-
-    save(thetaNtemp, path);
-    save(t, path2);
-    cout << 100 * (t - t0) / (tend - t0) << "%" << endl;
-
   }
+  save(thetaNtemp, t, path);
+  cout << 100 * (t - t0) / (tend - t0) << "%" << endl;
+
   double h = L / n;
-  save(h, path2);
+  save(h, path);
 
 }

@@ -11,7 +11,7 @@ double Integral(const function<double(double)> &f, double x0, double xend,
   double h = l / iter;
   erg = f(x0) - f(xend);
   for (int i = 0; i < iter; i++) {
-    erg = erg + 4 * f(x0 + i * h + h / 2) + 2 * f(x0 + (i + 1) * h);
+    erg = erg + 4 * f(x0 + i * h + h / 2) + 2 * f(x0 +  (i + 1) * h);
   }
   erg = h / 6 * erg;
   return erg;
