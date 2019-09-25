@@ -6,6 +6,7 @@ vector<vector<double>> Zm;
 vector<vector<double>> Km;
 vector<vector<double>> Vm;
 vector<vector<double>> Ym;
+vector<vector<double>> Mm;
 vector<double> uv;
 vector<double> verschv;
 vector<double> Adata;

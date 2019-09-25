@@ -29,10 +29,10 @@ utility/operators.cpp \
 utility/utility.cpp
 
 # specify additional flags for the C++ compiler, C++ standard 14 and include path to search for the #include directives
-CXXFLAGS += -std=c++17 -I../src -fopenmp
+CXXFLAGS += -std=c++17 -I../src -fopenmp -fstrict-aliasing
 
 # specify additional flags for the linker, -pg adds information for gprof, -g adds debugging symbols such that gprof knows the code lines (does not slow down program)
-LDFLAGS += -pg -g
+#LDFLAGS += -pg -g
 
 # default target if `make` is called is release
 all: release

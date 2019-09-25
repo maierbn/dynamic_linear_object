@@ -296,7 +296,7 @@ int main() {
 
   /*
    //Test von Alglib
-   real_2d_array h;
+   real_2d_arrayh;
    vector<double> a(9);
    a[0] = 4;
    a[1] = 5;
@@ -312,9 +312,9 @@ int main() {
    rhs[0] = -14;
    rhs[1] = 42;
    rhs[2] = 28;
-   real_1d_array r;
+   real_1d_arrayr;
    r.attach_to_ptr(3, rhs.data());
-   real_1d_array x;
+   real_1d_arrayx;
    vector<double> xlsg(3);
    x.attach_to_ptr(3, xlsg.data());
    int info = 0;
@@ -329,7 +329,7 @@ int main() {
    lhs[0] = -14;
    lhs[1] = 42;
    lhs[2] = 28;
-   real_1d_array p;
+   real_1d_arrayp;
    vector<vector<double>> A(3);
    A = K(2, 1, 0.5);
    plotteMatrix(A);
@@ -432,7 +432,7 @@ int main() {
    AMatrix = A(1.0, 0.5, n, thetaN, iter);
    BMatrix = B(1.0, 0.5, n, thetaN, iter);
    vector<vector<double>> Test;
-   Test = mZ(thetaN, thetaNp, rho,AMatrix,BMatrix);
+   Test = computeMatrixZ(thetaN, thetaNp, rho,AMatrix,BMatrix);
    plotteMatrix(Test);
    Test= convertMMatrix(Test);
    plotteMatrix(Test);

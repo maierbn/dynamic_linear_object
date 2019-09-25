@@ -13,6 +13,7 @@ extern vector<vector<double>> Zm;
 extern vector<vector<double>> Km;
 extern vector<vector<double>> Vm;
 extern vector<vector<double>> Ym;
+extern vector<vector<double>> Mm;
 extern vector<double> uv;
 extern vector<double> verschv;
 extern vector<double> Adata;

@@ -78,8 +78,8 @@ double CosIntIntegrand(double x, int i, double h, double hInv, const vector<doub
 double CosInt(int i, double s, double h, double hInv, const vector<double> &thetaN,
     int iter) {
   //Berechnet das Integral über den Cosinus von Theta multipliziert mit der i-ten Basisfunktion
-  double x1 = max(i - 1.0, 0.0) * h;
-  double x2 = min((i + 1.0) * h, s);
+  double x1 = max(i - (double)1.0, (double)0.0) * h;
+  double x2 = min((i + (double)1.0) * h, s);
 
   return Integral(CosIntIntegrand, x1, x2, iter,
                   CosIntIntegrand(x1, i, h, hInv, thetaN),
@@ -100,8 +100,8 @@ double SinInt(int i, double s, double h, double hInv, const vector<double> &thet
     int iter) {
   //Berechnet das Integral über den Sinus von Theta multipliziert mit der i-ten Basisfunktion
 
-  double x1 = max(i - 1.0, 0.0) * h;
-  double x2 = min((i + 1.0) * h, s);
+  double x1 = max(i - (double)1.0, (double)0.0) * h;
+  double x2 = min((i + (double)1.0) * h, s);
 
   return Integral(SinIntIntegrand, x1, x2, iter,
                   SinIntIntegrand(x1, i, h, hInv, thetaN),
@@ -136,8 +136,8 @@ double dSinInt(int i, int r, double s, double h, double hInv, const vector<doubl
   //Berechnet die Ableitung der Funktion SInInt  nach thetar
 
   if (abs(r - i) <= 1 && s > (r - 1) * h && s > (i - 1) * h) {
-    double x1 = max(min(r, i) - 1.0, 0.0) * h;
-    double x2 = min((max(r, i) + 1.0) * h, s);
+    double x1 = max(min(r, i) - (double)1.0, (double)0.0) * h;
+    double x2 = min((max(r, i) + (double)1.0) * h, s);
 
     return Integral(dSinIntIntegrand, x1, x2, iter,
                     dSinIntIntegrand(x1, i,r,h,hInv,thetaN),
@@ -161,8 +161,8 @@ double dCosInt(int i, int r, double s, double h, double hInv, const vector<doubl
   //Berechnet die Ableitung der Funktion CosInt nach thetar
 
   if (abs(r - i) <= 1 && s > (r - 1) * h && s > (i - 1) * h) {
-    double x1 = max(min(r, i) - 1.0, 0.0) * h;
-    double x2 = min((max(r, i) + 1.0) * h, s);
+    double x1 = max(min(r, i) - (double)1.0, (double)0.0) * h;
+    double x2 = min((max(r, i) + (double)1.0) * h, s);
 
     return Integral(dCosIntIntegrand, x1, x2, iter,
                     dCosIntIntegrand(x1, i,r,h,hInv,thetaN),
@@ -181,46 +181,48 @@ double AIntegrand(double x, int i, int r, int k, double h, double hInv, vector<d
   return dSinInt(i,r,x,h,hInv,thetaN,iter)*SinInt(k,x,h,hInv,thetaN,iter);
 }
 
-vector<vector<vector<double>>> A(double l, double h, double hInv, int n,
+void computeMatrixA(double l, double h, double hInv, int n,
     vector<double> &thetaN, int iter) {
   //Berechnet für alle i,k,r das Integral über dSinInt(i,r)*SinInt(k) zur Wiederverwendung
-  vector<vector<vector<double>>> out;
-  out.resize(n + 1);
-  for (int i = 0; i <= n; i++) {
-    out[i].resize(n + 1);
-    for (int k = 0; k <= n; k++) {
-      out[i][k].resize(n + 1);
+
+  if (Am.empty())
+  {
+    Am.resize(n + 1);
+    for (int i = 0; i <= n; i++) {
+      Am[i].resize(n + 1);
+      for (int k = 0; k <= n; k++) {
+        Am[i][k].resize(n + 1);
+      }
     }
   }
 
-  #pragma omp parallel for collapse(3) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(3) schedule(dynamic) shared(Am)
   for (int i = 0; i <= n; i++) {
     for (int k = 0; k <= n; k++) {
       for (int r = 0; r <= n; r++) {
         if (r >= i) {
 
-          out[i][k][r] =
+          Am[i][k][r] =
               Integral(AIntegrand, 0, l, iter,
                        0,
                        i,r,k,h,hInv,thetaN,iter);
 
-          out[r][k][i] = out[i][k][r];
+          Am[r][k][i] = Am[i][k][r];
         }
       }
     }
   }
 /*
-  #pragma omp parallel for collapse(3) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(3) schedule(dynamic) shared(Am)
   for (int i = 0; i <= n; i++) {
     for (int k = 0; k <= n; k++) {
       for (int r = 0; r <= n; r++) {
         if (r < i) {
-          out[i][k][r] = out[r][k][i];
+          Am[i][k][r] = Am[r][k][i];
         }
       }
     }
   }*/
-  return out;
 }
 
 double BIntegrand(double x, int i, int r, int k, double h, double hInv, vector<double> &thetaN, int iter)
@@ -228,70 +230,73 @@ double BIntegrand(double x, int i, int r, int k, double h, double hInv, vector<d
   return dCosInt(i,r,x,h,hInv,thetaN,iter)*CosInt(k,x,h,hInv,thetaN,iter);
 }
 
-vector<vector<vector<double>>> B(double l, double h, double hInv, int n,
+void computeMatrixB(double l, double h, double hInv, int n,
     vector<double> &thetaN, int iter) {
   //Berechnet für alle i,k,r das Integral über dCosInt(i,r)*CosInt(k) zur Wiederverwendung
-  vector<vector<vector<double>>> out;
-  out.resize(n + 1);
-  for (int i = 0; i <= n; i++) {
-    out[i].resize(n + 1);
-    for (int k = 0; k <= n; k++) {
-      out[i][k].resize(n + 1);
+
+  if (Bm.empty())
+  {
+    Bm.resize(n + 1);
+    for (int i = 0; i <= n; i++) {
+      Bm[i].resize(n + 1);
+      for (int k = 0; k <= n; k++) {
+        Bm[i][k].resize(n + 1);
+      }
     }
   }
 
-  #pragma omp parallel for collapse(3) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(3) schedule(dynamic) shared(Bm)
   for (int i = 0; i <= n; i++) {
     for (int k = 0; k <= n; k++) {
       for (int r = 0; r <= n; r++) {
         if (r >= i) {
 
-          out[i][k][r] =
+          Bm[i][k][r] =
               Integral(BIntegrand, 0, l, iter,
                        0,
                        i,r,k,h,hInv,thetaN,iter);
-          out[r][k][i] = out[i][k][r];
+          Bm[r][k][i] = Bm[i][k][r];
         }
       }
     }
   }
 /*
-  #pragma omp parallel for collapse(3) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(3) schedule(dynamic) shared(Bm)
   for (int i = 0; i <= n; i++) {
     for (int k = 0; k <= n; k++) {
       for (int r = 0; r <= n; r++) {
         if (r < i) {
-          out[i][k][r] = out[r][k][i];
+          Bm[i][k][r] = Bm[r][k][i];
         }
       }
     }
   }*/
-  return out;
 }
 
-vector<vector<double>> K(int n, double RFlex, double h, double hInv)
-//Berechnet die Steifigkeitsmatrix des Kabels mit N Stützstellen mit Abstand h und der Steifigkeit RFlex
-    {
-  vector<vector<double>> out;
-  out.resize(n + 1);
-  for (int i = 0; i <= n; i++) {
-    out[i].resize(n + 1);
+void computeMatrixK(int n, double RFlex, double h, double hInv) {
+  //Berechnet die Steifigkeitsmatrix des Kabels mit N Stützstellen mit Abstand h und der Steifigkeit RFlex
+
+  if (Km.empty())
+  {
+    Km.resize(n + 1);
+    for (int i = 0; i <= n; i++) {
+      Km[i].resize(n + 1);
+    }
   }
 
   for (int i = 0; i <= n; i++) {
     for (int j = 0; j <= n; j++) {
       if (i == j && i > 0 && i < n) {
-        out[i][j] = 2 * RFlex * hInv;
+        Km[i][j] = 2 * RFlex * hInv;
       } else if (i == j) {
-        out[i][j] = RFlex * hInv;
+        Km[i][j] = RFlex * hInv;
 
       } else if (j - i == 1 || i - j == 1) {
-        out[i][j] = -RFlex * hInv;
+        Km[i][j] = -RFlex * hInv;
 
       }
     }
   }
-  return out;
 }
 
 double dm(int i, int k, int r, double rho, vector<vector<vector<double>>> &A,
@@ -327,106 +332,111 @@ double Y(int r, int k, vector<double> &thetaN, vector<double> &thetaNp,
   return temp;
 
 }
-vector<vector<double>> mM(double rho, double h, double hInv, vector<double> &thetaN,
+void computeMatrixM(double rho, double h, double hInv, vector<double> &thetaN,
     double l, int iter) {
   //Berechnet die Matrix M, mit Mij = m(i,j,...)
-  vector<vector<double>> out;
 
   int imax = thetaN.size();
-  out.resize(imax);
-  for (int i = 0; i < imax; i++) {
-    out[i].resize(imax);
+  if (Mm.empty())
+  {
+    Mm.resize(imax);
+    for (int i = 0; i < imax; i++) {
+      Mm[i].resize(imax);
+    }
   }
 
-  #pragma omp parallel for collapse(2) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(2) schedule(dynamic) shared(Mm)
   for (int i = 0; i < imax; i++) {
     for (int j = 0; j < imax; j++) {
       if (j >= i) {
-        out[i][j] = m(i, j, rho, h, hInv, thetaN, l, iter);
-        out[j][i] = out[i][j];
+        Mm[i][j] = m(i, j, rho, h, hInv, thetaN, l, iter);
+        Mm[j][i] = Mm[i][j];
       }
     }
   }
   /*
-  #pragma omp parallel for collapse(2) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(2) schedule(dynamic) shared(Mm)
   for (int i = 0; i < imax; i++) {
     for (int j = 0; j < imax; j++) {
       if (j < i) {
-        out[i][j] = out[j][i];
+        Mm[i][j] = Mm[j][i];
       }
     }
   }*/
-  return out;
 }
 
-vector<vector<double>> mZ(vector<double> &thetaN, vector<double> &thetaNp,
+void computeMatrixZ(vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B) {
   //Berechnet die Matrix Z, mit Zij = Z(i,j,...)
-  vector<vector<double>> out;
+
   int imax = thetaN.size();
-  out.resize(imax);
-  for (int i = 0; i < imax; i++) {
-    out[i].resize(imax);
+  if (Zm.empty())
+  {
+    Zm.resize(imax);
+    for (int i = 0; i < imax; i++) {
+      Zm[i].resize(imax);
+    }
   }
 
-  #pragma omp parallel for collapse(2) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(2) schedule(dynamic) shared(Zm)
   for (int i = 0; i < imax; i++) {
     for (int j = 0; j < imax; j++) {
       if (j >= i) {
         if (i == j) {
-          out[i][j] = 0;
+          Zm[i][j] = 0;
         } else {
-          out[i][j] = Z(i, j, thetaN, thetaNp, rho, A, B);
-          out[j][i] = -out[i][j];
+          Zm[i][j] = Z(i, j, thetaN, thetaNp, rho, A, B);
+          Zm[j][i] = -Zm[i][j];
         }
       }
     }
   }
 /*
-  #pragma omp parallel for collapse(2) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(2) schedule(dynamic) shared(Zm)
   for (int i = 0; i < imax; i++) {
     for (int j = 0; j < imax; j++) {
       if (j < i) {
-        out[i][j] = -out[j][i];
+        Zm[i][j] = -Zm[j][i];
       }
     }
   }*/
-  return out;
 }
 
-vector<vector<double>> mY(vector<double> &thetaN, vector<double> &thetaNp,
+void computeMatrixY(vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B) {
   //Berechnet die Matrix Y, mit Yij = Y(i,j,...)
-  vector<vector<double>> out;
+
   int imax = thetaN.size();
-  out.resize(imax);
-  for (int i = 0; i < imax; i++) {
-    out[i].resize(imax);
+  if (Ym.empty())
+  {
+    Ym.resize(imax);
+    for (int i = 0; i < imax; i++) {
+      Ym[i].resize(imax);
+    }
   }
 
-  #pragma omp parallel for collapse(2) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(2) schedule(dynamic) shared(Ym)
   for (int i = 0; i < imax; i++) {
     for (int j = 0; j < imax; j++) {
       if (j >= i) {
-        out[i][j] = Y(i, j, thetaN, thetaNp, rho, A, B);
-        out[j][i] = out[i][j];
+        Ym[i][j] = Y(i, j, thetaN, thetaNp, rho, A, B);
+        Ym[j][i] = Ym[i][j];
       }
     }
   }
 
   /*
-  #pragma omp parallel for collapse(2) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(2) schedule(dynamic) shared(Ym)
   for (int i = 0; i < imax; i++) {
     for (int j = 0; j < imax; j++) {
       if (j < i) {
-        out[i][j] = out[j][i];
+        Ym[i][j] = Ym[j][i];
       }
     }
   }
   */
-  return out;
 }
 
 double V(int r, int j, vector<double> &thetaN, vector<double> &thetaNp,
@@ -463,34 +473,37 @@ double V(int r, int j, vector<double> &thetaN, vector<double> &thetaNp,
   return out;
 }
 
-vector<vector<double>> mV(vector<double> &thetaN, vector<double> &thetaNp,
+void computeMatrixV(vector<double> &thetaN, vector<double> &thetaNp,
     double h, double hInv, double l, double mu, double t, int iter, double rho) {
-  vector<vector<double>> out;
   //Berechnet die Matrix V, mit Vij = V(i,j,...)
+
   int imax = thetaN.size();
-  out.resize(imax);
-  for (int i = 0; i < imax; i++) {
-    out[i].resize(imax);
+  if (Vm.empty())
+  {
+    Vm.resize(imax);
+    for (int i = 0; i < imax; i++) {
+      Vm[i].resize(imax);
+    }
   }
 
-  #pragma omp parallel for collapse(2) schedule(dynamic) shared(out)
+  #pragma omp parallel for collapse(2) schedule(dynamic) shared(Vm)
   for (int i = 0; i < imax; i++) {
     for (int j = 0; j < imax; j++) {
       if (j >= i) {
-        out[i][j] = V(i, j, thetaN, thetaNp, iter, h, hInv, mu, t, rho);
+        Vm[i][j] = V(i, j, thetaN, thetaNp, iter, h, hInv, mu, t, rho);
+        Vm[j][i] = Vm[i][j];
       }
     }
   }
-
-  #pragma omp parallel for collapse(2) schedule(dynamic) shared(out)
+/*
+  #pragma omp parallel for collapse(2) schedule(dynamic) shared(Vm)
   for (int i = 0; i < imax; i++) {
     for (int j = 0; j < imax; j++) {
       if (j < i) {
-        out[i][j] = out[j][i];
+        Vm[i][j] = Vm[j][i];
       }
     }
-  }
-  return out;
+  }*/
 }
 
 double u(int r, vector<double> &thetaN, vector<double> &thetaNp, int iter,
@@ -583,4 +596,21 @@ vector<vector<double>> convertMMatrix(vector<vector<double>> A) {
     }
   }
   return B;
+}
+
+void convertMMatrix() {
+  //Verändert die Massenmatrix so, dass sich der erste Winkel nur aus der gegebenen Funktion berechnet
+  size_t n = Mm.size();
+
+  for (size_t i = 0; i < n; ++i) {
+    for (size_t j = 0; j < n; ++j) {
+      if (i == 0) {
+        if (j == 0) {
+          Mm[i][j] = 1;
+        } else {
+          Mm[i][j] = 0;
+        }
+      }
+    }
+  }
 }

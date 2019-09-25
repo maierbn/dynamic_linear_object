@@ -32,15 +32,15 @@ double dCosInt(int i, int r, double s, double h, double hInv, const vector<doubl
     int iter);
 
 //Berechnet für alle i,k,r das Integral über dSinInt(i,r)*SinInt(k) zur Wiederverwendung
-vector<vector<vector<double>>> A(double l, double h, double hInv, int n,
+void computeMatrixA(double l, double h, double hInv, int n,
     vector<double> &thetaN, int iter);
 
 //Berechnet für alle i,k,r das Integral über dCosInt(i,r)*CosInt(k) zur Wiederverwendung
-vector<vector<vector<double>>> B(double l, double h, double hInv, int n,
+void computeMatrixB(double l, double h, double hInv, int n,
     vector<double> &thetaN, int iter);
 
 //Berechnet die Steifigkeitsmatrix des Kabels mit N Stützstellen mit Abstand h und der Steifigkeit RFlex
-vector<vector<double>> K(int n, double RFlex, double h, double hInv);
+void computeMatrixK(int n, double RFlex, double h, double hInv);
 
 //Berechnet die Ableitung der Funktion m(i,k) nach Theta_r
 double dm(int i, int k, int r, double rho, vector<vector<vector<double>>> &A,
@@ -57,16 +57,16 @@ double Y(int r, int k, vector<double> &thetaN, vector<double> &thetaNp,
     vector<vector<vector<double>>> &B);
 
 //Berechnet die Matrix M, mit Mij = m(i,j,...)
-vector<vector<double>> mM(double rho, double h, double hInv, vector<double> &thetaN,
+void computeMatrixM(double rho, double h, double hInv, vector<double> &thetaN,
     double l, int iter);
 
 //Berechnet die Matrix Z, mit Zij = Z(i,j,...)
-vector<vector<double>> mZ(vector<double> &thetaN, vector<double> &thetaNp,
+void computeMatrixZ(vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B);
 
 //Berechnet die Matrix Y, mit Yij = Y(i,j,...)
-vector<vector<double>> mY(vector<double> &thetaN, vector<double> &thetaNp,
+void computeMatrixY(vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B);
 
@@ -75,7 +75,7 @@ double V(int r, int j, vector<double> &thetaN, vector<double> &thetaNp,
     int iter, double h, double hInv, double mu, double t, double rho);
 
 //Berechnet die Matrix V, mit Vij = V(i,j,...)
-vector<vector<double>> mV(vector<double> &thetaN, vector<double> &thetaNp,
+void computeMatrixV(vector<double> &thetaN, vector<double> &thetaNp,
     double h, double hInv, double l, double mu, double t, int iter, double rho);
 
 //Berechnet den Wert u aus Gleichung 34
@@ -92,3 +92,6 @@ vector<double> verschVek(vector<double> &thetaN, vector<double> &thetaNp,
 
 //Verändert die Massenmatrix so, dass sich der erste Winkel nur aus der gegebenen Funktion berechnet
 vector<vector<double>> convertMMatrix(vector<vector<double>> A);
+
+//Verändert die Massenmatrix so, dass sich der erste Winkel nur aus der gegebenen Funktion berechnet
+void convertMMatrix();

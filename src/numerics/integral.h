@@ -18,15 +18,16 @@ double archimedes1d_adaptive_surplus(double a, double b, double fa, double fb, A
   double f_middle = f(x_middle, std::forward<Args>(args)...);            // Auswertung der Funktion in der Mitte des Intervalls
   double height = f_middle - 0.5*(fa + fb);  // Höhe des Dreiecks
 
+  double height_ba = height * (b-a);
   const double epsilon = 1e-5;   // error tolerance
 
-  if (fabs(height) * (b - a) < epsilon)    // Abbruchkriterium
+  if (fabs(height_ba) < epsilon)    // Abbruchkriterium
   {
-    return 0.5 * height * (b - a) * 4./3.;
+    return 0.5 * 4./3. * height_ba;
   }
   else
   {
-    return 0.5 * height * (b - a)
+    return 0.5 * height_ba
       + archimedes1d_adaptive_surplus<Fn,f,Args...>(a,        x_middle, fa,       f_middle, std::forward<Args>(args)...)
       + archimedes1d_adaptive_surplus<Fn,f,Args...>(x_middle, b,        f_middle, fb,       std::forward<Args>(args)...);
   }
