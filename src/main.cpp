@@ -10,6 +10,7 @@
 #include <cmath>
 #include <omp.h>
 #include <chrono>
+#include <sstream>
 
 #include "terms/problem_definition.h"
 #include "utility/utility.h"
@@ -25,7 +26,11 @@ double func(double x)
 }
 */
 
-int main() {
+int main()
+{
+
+  // start duration measurement
+  std::chrono::time_point<std::chrono::steady_clock> t1 = std::chrono::steady_clock::now();
 
   //Main part
   //Eingabe durch den Benutzer
@@ -35,7 +40,7 @@ int main() {
   double flaechentraegheitsmoment = M_PI*pow(radius,4) / 4.0;    // Flächenträgheitsmoment [m^4] für kreiförmigen Querschnitt
   double emodul = 2e6;                      // E-Modul [N/m^2] = [Pa]
 
-  double Rflex =  emodul*flaechentraegheitsmoment;      // Biegesteifigkeit [N/rad] [Nm^2]
+  double Rflex = emodul*flaechentraegheitsmoment;      // Biegesteifigkeit [N/rad] [Nm^2]
   double L = 0.15;                   // Länge [m]
   double querschnitt = M_PI * pow(radius, 2);
   double rho = 7850.0 * querschnitt;        // Dichte * Querschnitt   [kg/m^3]*[m^2] = [kg/m]
@@ -54,14 +59,19 @@ int main() {
 	double L = 1;
 	double rho =1.0;
 	double mu = 0.3;
+  double dt = 8.3333e-4;
+  int iter = 80;
 }
   // numeric parameters
   int n = 3;                        // Anzahl Elemente
   double t0 = 0;
-  double tend = 0.05;  // 0.5
-  tend = 1;
+  double tend = 5;  // 0.5
   double dt = 1e-3;      // Zeitschrittweite für RK4
-  int iter = 6;          // Anzahl Internvalle in Simpson-Summe
+  int iter = 8;          // Anzahl Internvalle in Simpson-Summe
+
+  //Rflex = 1.0; L = 1; rho = 1.0; mu = 0.3; tend = 0.5;
+  //dt = 8.3333e-4;
+  //n = 8;
 
   bool ver;
   bool reib;
@@ -81,16 +91,7 @@ int main() {
   }
 
 
-  double h = L/n;
-  cout << "tend: " << tend << ", L: " << L << " m, Rflex: " << Rflex << " N*m^2, rho: " << rho << " kg/m" << ", h: " << h << ", rho*h: " << rho*h << " kg, ReibF: " << Reibf(L/2., h, rho) << endl;
   //cout << omp_get_max_threads() << " Threads." << endl;
-
-  //eigener Fall
-  ver = true;
-  reib = true;
-  winkelkontrolle = false;
-  path1 = "Fallneu.csv";
-  path2 = "Fallneut.csv";
 
 // aufgeprägte Verschiebung:
 // verschiebung(t) = v2 * t^2 + v1 * t,    mit v2=(vx2,vy2), v1=(vx1,vy1)
@@ -100,81 +101,67 @@ int main() {
 // aufgeprägter Winkel:
 // theta0(t) = t02 * t^2 + t01 * t + t00
 
-  vx1 = 0;    // 0.1 = 0.5m / 5s
-  vy1 = -0.1;
-  vx2 = 0;
-  vy2 = 0;
+  std::string scenario = "5";
 
-  t02 = 0;
-  t01 = 0;
-  t00 = 0;
+  if (scenario == "realtime")
+  {
+    //eigener Fall
+    ver = true;
+    reib = true;
+    winkelkontrolle = false;
+    path1 = "Fallneu.csv";
+    path2 = "Fallneut.csv";
 
-  std::chrono::time_point<std::chrono::steady_clock> t1 = std::chrono::steady_clock::now();
+    vx1 = 0;    // 0.1 = 0.5m / 5s
+    vy1 = -0.1;
+    vx2 = 0;
+    vy2 = 0;
 
-  remove(path1.c_str());
-  remove(path2.c_str());
-  save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-  rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
-  thetaNp, iter, t0, path1, path2, dt, tend);
-  finish(t1, path1);
+    t02 = 0;
+    t01 = 0;
+    t00 = 0;
+  }
+  if (scenario == "1")
+  {
+    //1. Fall
+    ver = true;
+    reib = false;
+    winkelkontrolle = false;
+    path1 = "Fall1t5.csv";
+    path2 = "Fall1t5t.csv";
 
-  /*
-//1. Fall
-  ver = true;
-  reib = true;
-  winkelkontrolle = false;
-  path1 = "Fall1t5.csv";
-  path2 = "Fall1t5t.csv";
+    vx2 = 0;
+    vx1 = 0;
+    vy2 = 0.2;
+    vy1 = 0;
+    t02 = 0;
+    t01 = 0;
+    t00 = 0;
+  }
+  else if (scenario == "1.5")
+  {
 
-  vx2 = 0;
-  vx1 = 0;
-  vy2 = 0.2;
-  vy1 = 0;
-  t02 = 0;
-  t01 = 0;
-  t00 = 0;
+    //1,5. Fall lineare Bewegung
+    ver = true;
+    reib = true;
+    winkelkontrolle = false;
+    path1 = "Fall1lint5rho1000R05.csv";
+    path2 = "Fall1lint5rho1000R05t.csv";
 
-  t1 = time(0);
+    vx2 = 0;
+    vx1 = 0;
+    vy2 = 0;
+    vy1 = 1;
+    t02 = 0;
+    t01 = 0;
+    t00 = 0;
+  }
+  else if (scenario == "2")
+  {
 
-  remove(path1.c_str());
-  remove(path2.c_str());
-  save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-  rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
-      thetaNp, iter, t0, path1, path2, dt, tend);
-  finish(t1, path1);
-
-*/
-  /*
-  //1,5. Fall lineare Bewegung
-  ver = true;
-  reib = true;
-  winkelkontrolle = false;
-  path1 = "Fall1lint5rho1000R05.csv";
-  path2 = "Fall1lint5rho1000R05t.csv";
-
-  vx2 = 0;
-  vx1 = 0;
-  vy2 = 0;
-  vy1 = 1;
-  t02 = 0;
-  t01 = 0;
-  t00 = 0;
-  t1 = time(0);
-
-  remove(path1.c_str());
-  remove(path2.c_str());
-  save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-  rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
-      thetaNp, iter, t0, path1, path2, dt, tend);
-  finish(t1, path1);
-
-
-*/
-
-  /*
-   //2. Fall
+   // Ausarbeitung Fall 1: Reine Verschiebung
    ver = true;
-   reib = false;
+   reib = true;     // false
    winkelkontrolle = false;
    path1 = "Fall2R10.csv";
    path2 = "Fall2R10t.csv";
@@ -186,42 +173,32 @@ int main() {
    t02 = 0;
    t01 = 0;
    t00 = 0;
-   t1 = time(0);
+   tend = 0.5;
+   Rflex = 1.0; L = 1; rho = 1.0; mu = 0.3;
+   // set Reibf to constant 10
+  }
+  else if (scenario == "3")
+  {
 
-   remove(path1.c_str());
-   remove(path2.c_str());
-   save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-   rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
-   thetaNp, iter, t0, path1, path2, dt, tend);
-   finish(t1, path1);
-   */
+    //3. Fall
+    ver = true;
+    reib = true;
+    winkelkontrolle = true;
+    path1 = "Fall3Reibung.csv";
+    path2 = "Fall3Reibungt.csv";
 
-/*
-   //3. Fall
-   ver = true;
-   reib = true;
-   winkelkontrolle = true;
-   path1 = "Fall3Reibung.csv";
-   path2 = "Fall3Reibungt.csv";
+    vx2 = 0;
+    vx1 = 6;
+    vy2 = 16;
+    vy1 = 0;
+    t02 = 0;
+    t01 = -4.7;
+    t00 = 0;
+  }
+  else if (scenario == "4")
+  {
 
-   vx2 = 0;
-   vx1 = 6;
-   vy2 = 16;
-   vy1 = 0;
-   t02 = 0;
-   t01 = -4.7;
-   t00 = 0;
-   t1 = time(0);
-
-   remove(path1.c_str());
-   remove(path2.c_str());
-   save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-   rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
-   thetaNp, iter, t0, path1, path2, dt, tend);
-   finish(t1, path1);
-*/
-  /*
-   //4. Fall
+   // Ausarbeitung Fall 2: Reine Verdrehung
    ver = false;
    reib = false;
    winkelkontrolle = true;
@@ -234,17 +211,13 @@ int main() {
    t02 = 6;
    t01 = 3;
    t00 = 0;
-   t1 = time(0);
+   tend = 1.0;
+   Rflex = 1.0; L = 1; rho = 1.0; mu = 0.3;
+  }
+  else if (scenario == "5")
+  {
 
-   remove(path1.c_str());
-   remove(path2.c_str());
-   save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-   rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
-   thetaNp, iter, t0, path1, path2, dt, tend);
-   finish(t1, path1);
-   */
-  /*
-   //5. Fall
+   //Ausarbeitung Fall 4: Vergleich zweier Kabel mit unterschiedlichen Biegesteifigkeiten
    ver = true;
    reib = true;
    winkelkontrolle = true;
@@ -258,17 +231,13 @@ int main() {
    t02 = 0;
    t01 = 1.6;
    t00 = 0;
-   t1 = time(0);
+   tend = 1.0;
+   Rflex = 5.0; // 1.0
+   L = 1; rho = 1.0; mu = 0.3;
+  }
+  else if (scenario == "6")
+  {
 
-   remove(path1.c_str());
-   remove(path2.c_str());
-   save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-   rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
-   thetaNp, iter, t0, path1, path2, dt, tend);
-   finish(t1, path1);
-
-   */
-  /*
    //Euler
    string path1 = "ErgebnisseEuler_horizontal_nach_oben_v9_n8_reib.csv";
    string path2 = "ErgebnisseEuler_horizontal_nach_oben_v9_n8_reibt.csv";
@@ -277,9 +246,37 @@ int main() {
    save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
    euler(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN, thetaNp,
    iter, t0, path1, path2, dt, tend);
-   finish(t1, path1);*/
-  /*
+   finish(t1, path1);
 
+   exit(0);
+  }
+
+  // print information
+  double h = L/n;
+  cout << "scenario " << scenario << ", output: " << path1 << endl;
+  cout << "n: " << n << ", dt: " << dt << ", tend: " << tend << ", L: " << L << " m, Rflex: " << Rflex << " N*m^2, rho: " << rho << " kg/m" << ", h: " << h << ", rho*h: " << rho*h << " kg, ReibF: " << Reibf(L/2., h, rho) << endl;
+
+  // delete existing output files
+  remove(path1.c_str());
+  remove(path2.c_str());
+
+  // save options
+  save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
+
+  // run simulation
+  rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
+    thetaNp, iter, t0, path1, path2, dt, tend);
+
+  // finalize output file and measure duration
+  finish(t1, path1);
+
+  cout << "now call ./plot.py " << path1 << endl;
+
+  std::stringstream command;
+  command << "./plot.py " << path1;
+  int ret = system(command.str().c_str()); ret++;
+
+  /*
    //RungeKutta
    t1 = time(0);
    string path1 = "ErgebnisseRK4_horizontal_nach_oben_v9_reib.csv";

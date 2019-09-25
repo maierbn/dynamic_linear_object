@@ -12,24 +12,25 @@ using namespace std;
 
 //! Archimedes-Quadratur 1D, adaptiv, Überschuss d.h. f(a)=f(b)=0
 template<typename Fn, Fn *f, typename... Args>
-double archimedes1d_adaptive_surplus(double a, double b, double fa, double fb, Args&&... args)
+double archimedes1d_adaptive_surplus(double a, double b, double fa, double fb, int level, Args&&... args)
 {
   double x_middle = 0.5*(a + b);             // Mittelpunkt des Intervalls
   double f_middle = f(x_middle, std::forward<Args>(args)...);            // Auswertung der Funktion in der Mitte des Intervalls
   double height = f_middle - 0.5*(fa + fb);  // Höhe des Dreiecks
 
   double height_ba = height * (b-a);
-  const double epsilon = 1e-5;   // error tolerance
+  
+  const double epsilon = 1e-5;   // error tolerance
 
-  if (fabs(height_ba) < epsilon)    // Abbruchkriterium
+  if (level >= 3 || fabs(height_ba) < epsilon)    // Abbruchkriterium
   {
-    return 0.5 * 4./3. * height_ba;
+    return 0.5 * 4./3. * height_ba;
   }
   else
   {
     return 0.5 * height_ba
-      + archimedes1d_adaptive_surplus<Fn,f,Args...>(a,        x_middle, fa,       f_middle, std::forward<Args>(args)...)
-      + archimedes1d_adaptive_surplus<Fn,f,Args...>(x_middle, b,        f_middle, fb,       std::forward<Args>(args)...);
+      + archimedes1d_adaptive_surplus<Fn,f,Args...>(a,        x_middle, fa,       f_middle, level+1, std::forward<Args>(args)...)
+      + archimedes1d_adaptive_surplus<Fn,f,Args...>(x_middle, b,        f_middle, fb,       level+1, std::forward<Args>(args)...);
   }
 };
 
@@ -76,7 +77,7 @@ double Integral_(double x0, double xend, int iter, double fa, Args&&... args)
 
   const double trapezoid = 0.5 * (b-a) * (fa + fb);
 
-  const double result = trapezoid + archimedes1d_adaptive_surplus<Fn,f,Args...>(a, b, fa, fb, std::forward<Args>(args)...);
+  const double result = trapezoid + archimedes1d_adaptive_surplus<Fn,f,Args...>(a, b, fa, fb, 0, std::forward<Args>(args)...);
   return result;
 #endif
 }

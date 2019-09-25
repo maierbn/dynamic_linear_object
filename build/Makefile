@@ -53,9 +53,17 @@ debug/%.o: ../src/%.cpp
 release/%.o: ../src/%.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -Ofast $(TARGET_ARCH) $< $(LDLIBS) -c -o $@
 
+# target to compile project source files in ../src, store in profile directory, with release flags and profiling flags (binary is fast but not optimal, can be profiled using gprof)
+profile/%.o: ../src/%.cpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -g -pg -Ofast $(TARGET_ARCH) $< $(LDLIBS) -c -o $@
+
 # target to link binary, link to alglib and all files in release directory
 release: libalglib.a $(FILES:%.cpp=release/%.o)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(FILES:%.cpp=release/%.o) -L. -lalglib -o simulation
+
+# target to link binary, link to alglib and all files in profile directory
+profile: libalglib.a $(FILES:%.cpp=profile/%.o)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(FILES:%.cpp=profile/%.o) -L. -lalglib -o simulation_profile
 
 # target to link binary, link to alglib and all files in debug directory
 debug: libalglib.a $(FILES:%.cpp=debug/%.o)
@@ -63,4 +71,8 @@ debug: libalglib.a $(FILES:%.cpp=debug/%.o)
 
 # delete all built files
 clean:
-	rm -rf alglib/*.o debug/*/*.o debug/*.o release/*/*.o release/*.o libalglib.a simulation simulation_debug
+	rm -rf alglib/*.o debug/*/*.o debug/*.o release/*/*.o release/*.o profile/*/*.o profile/*.o libalglib.a simulation simulation_debug simulation_profile
+
+# only delete own built files, not alglib
+clean_own:
+	rm -rf debug/*/*.o debug/*.o release/*/*.o release/*.o profile/*/*.o profile/*.o simulation simulation_debug simulation_profile
