@@ -14,29 +14,34 @@ using namespace std;
 template<typename Fn, Fn *f, typename... Args>
 double archimedes1d_adaptive_surplus(double a, double b, double fa, double fb, Args&&... args)
 {
-  if (fabs(a-b) < 1e-12)
-    return 0;
-  double x_middle = (a+b) / 2.;             // Mittelpunkt des Intervalls
+  double x_middle = 0.5*(a + b);             // Mittelpunkt des Intervalls
   double f_middle = f(x_middle, std::forward<Args>(args)...);            // Auswertung der Funktion in der Mitte des Intervalls
-  double height = f_middle - (fa + fb)/2.;  // Höhe des Dreiecks
+  double height = f_middle - 0.5*(fa + fb);  // Höhe des Dreiecks
 
   const double epsilon = 1e-5;   // error tolerance
 
   if (fabs(height) * (b - a) < epsilon)    // Abbruchkriterium
   {
-    return 1./2. * height * (b - a) * 4./3.;
+    return 0.5 * height * (b - a) * 4./3.;
   }
   else
   {
-    return 1./2. * height * (b - a)
+    return 0.5 * height * (b - a)
       + archimedes1d_adaptive_surplus<Fn,f,Args...>(a,        x_middle, fa,       f_middle, std::forward<Args>(args)...)
       + archimedes1d_adaptive_surplus<Fn,f,Args...>(x_middle, b,        f_middle, fb,       std::forward<Args>(args)...);
   }
 };
 
 // source: https://stackoverflow.com/a/25403872/10290071
+/** Compute numerical integral of f over the domain [x0,xend]
+ * @param x0 begin of integration interval
+ * @param xend end of integration interval
+ * @param iter number of iterations for composite simpson
+ * @param fa   integrand evaluated at x0
+ *
+ */
 template<typename Fn, Fn *f, typename... Args>
-double Integral_(double x0, double xend, int iter, Args&&... args)
+double Integral_(double x0, double xend, int iter, double fa, Args&&... args)
 {
 #if 0
   // normal simpson rule
@@ -66,10 +71,7 @@ double Integral_(double x0, double xend, int iter, Args&&... args)
   // adaptive archimedes quadrature
   const double a = x0;
   const double b = xend;
-  const double fa = f(a, std::forward<Args>(args)...);
   const double fb = f(b, std::forward<Args>(args)...);
-  if (isnan(fb))
-    exit(-2);
 
   const double trapezoid = 0.5 * (b-a) * (fa + fb);
 

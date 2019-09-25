@@ -2,13 +2,14 @@
  * main.cpp
  *
  *  Created on: 17.01.2019
- *      Author: mariu
+ *      Author: mariu, maierbn
  */
 #include <vector>
 #include <iostream>
 #include <ctime>
 #include <cmath>
 #include <omp.h>
+#include <chrono>
 
 #include "terms/problem_definition.h"
 #include "utility/utility.h"
@@ -79,7 +80,6 @@ int main() {
     thetaNp[i] = 0.0;
   }
 
-  time_t t1;
 
   double h = L/n;
   cout << "tend: " << tend << ", L: " << L << " m, Rflex: " << Rflex << " N*m^2, rho: " << rho << " kg/m" << ", h: " << h << ", rho*h: " << rho*h << " kg, ReibF: " << Reibf(L/2., h, rho) << endl;
@@ -109,7 +109,7 @@ int main() {
   t01 = 0;
   t00 = 0;
 
-  t1 = time(0);
+  std::chrono::time_point<std::chrono::steady_clock> t1 = std::chrono::steady_clock::now();
 
   remove(path1.c_str());
   remove(path2.c_str());

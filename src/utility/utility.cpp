@@ -67,7 +67,7 @@ void save(int n, double Rflex, double L, double rho, double mu,
   file.close();
 }
 
-void finish(time_t t1, string path) {
+void finish(std::chrono::time_point<std::chrono::steady_clock> t1, string path) {
   //Speichert die Zeitdifferent aus t1 und der aktuellen Zeit in einer csv Datei am Ort path
   ofstream file;
   file.open(path.c_str(), ios::out | ios::app);
@@ -75,9 +75,10 @@ void finish(time_t t1, string path) {
     cout << "Datei \"" << path << "\" konnte nicht geöffnet werden" << endl;
     return;
   }
-  time_t t2 = time(0) - t1;
-  file << t2;
+  auto now = std::chrono::steady_clock::now();
+  auto t2 = std::chrono::duration_cast<chrono::milliseconds>(now - t1).count();
+  file << t2/1000.0;
   file.close();
 
-  cout << "Dauer: " << t2 << " s" << endl;
+  cout << "Dauer: " << t2 << " ms" << endl;
 }

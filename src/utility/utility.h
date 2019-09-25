@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <iostream>
+#include <chrono>
 
 using namespace std;
 
@@ -19,4 +20,4 @@ void save(int n, double Rflex, double L, double rho, double mu,
           int iter, bool ver, bool reib, bool winkelkontrolle, string path);
 
 //Speichert die Zeitdifferent aus t1 und der aktuellen Zeit in einer csv Datei am Ort path
-void finish(time_t t1, string path);
+void finish(std::chrono::time_point<std::chrono::steady_clock> t1, string path);
