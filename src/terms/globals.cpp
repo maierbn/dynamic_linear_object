@@ -1,5 +1,6 @@
 #include "terms/globals.h"
 
+double tend;
 vector<vector<vector<double>>> Am;
 vector<vector<vector<double>>> Bm;
 vector<vector<double>> Zm;

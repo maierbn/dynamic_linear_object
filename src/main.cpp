@@ -16,6 +16,7 @@
 #include "utility/utility.h"
 #include "numerics/timestepping.h"
 #include "numerics/integral.h"
+#include "terms/globals.h"
 
 using namespace std;
 /*
@@ -65,9 +66,10 @@ int main()
   // numeric parameters
   int n = 3;                        // Anzahl Elemente
   double t0 = 0;
-  double tend = 5;  // 0.5
-  double dt = 1e-3;      // Zeitschrittweite für RK4
+  tend = 5;  // 0.5
+  double dt = 1e-4;      // Zeitschrittweite für RK4
   int iter = 8;          // Anzahl Internvalle in Simpson-Summe
+  useSmoothFunction = false;
 
   //Rflex = 1.0; L = 1; rho = 1.0; mu = 0.3; tend = 0.5;
   //dt = 8.3333e-4;
@@ -80,16 +82,7 @@ int main()
   string path2;
 
   // Startwerte
-  double start_winkel = 0.0;
-  vector<double> thetaStart(2 * n + 2, start_winkel);
-  vector<double> thetaN(n + 1);
-  vector<double> thetaNp(n + 1);
-  for (int i = 0; i <= n; i++) {
-    thetaN[i] = thetaStart[i];
-    //thetaNp[i] = thetaStart[n + 1 + i];
-    thetaNp[i] = 0.0;
-  }
-
+  double start_winkel = M_PI;
 
   //cout << omp_get_max_threads() << " Threads." << endl;
 
@@ -101,9 +94,118 @@ int main()
 // aufgeprägter Winkel:
 // theta0(t) = t02 * t^2 + t01 * t + t00
 
-  std::string scenario = "5";
+  std::string scenario = "tube4";
 
-  if (scenario == "realtime")
+  if (scenario == "white2")
+  {
+    //eigener Fall
+    ver = false;
+    reib = true;
+    winkelkontrolle = true;
+    path1 = "white2.csv";
+    path2 = "white2t.csv";
+
+    vx1 = 0;    // 0.1 = 0.5m / 5s
+    vy1 = 0;
+    vx2 = 0;
+    vy2 = 0;
+
+    t02 = 0;
+    t01 = M_PI / 10.0;
+    t00 = M_PI;
+    start_winkel = M_PI;
+    useSmoothFunction = false;
+
+    double length = 44.5e-2;  // [m]
+    double weight = 8e-3;    // [kg]
+
+    rho = weight / length;
+    L = 40e-2;
+    Rflex = 9e-4;
+    mu = 0.3;
+    dt = 5e-3;
+
+    tend = 10;
+  }
+  else if (scenario == "tube4")
+  {
+    //eigener Fall
+    ver = true;
+    reib = true;
+    winkelkontrolle = true;
+    path1 = "tube4.csv";
+    path2 = "tube4t.csv";
+
+    vx1 = 0.4 / 4;    // 0.70m / 4s
+    vy1 = -0.1 / 4;   // 0.20m / 4s
+    vx2 = 0;
+    vy2 = 0;
+
+    t02 = 0;
+    t01 = M_PI_2*1.5 / 4.0;
+    t00 = M_PI;
+    start_winkel = M_PI;
+
+    double length = 80e-2;  // [m]
+    double weight = 120e-3;    // [kg]
+
+    rho = weight / length;
+    L = length;
+    Rflex = 5e-2;
+    mu = 0.6;
+    dt = 1e-2;
+    tend = 4;
+    useSmoothFunction = true;
+    n = 3;
+  }
+  else if (scenario == "exp1")
+  {
+
+   // Ausarbeitung Fall 1: Reine Verschiebung
+   ver = true;
+   reib = true;     // false
+   winkelkontrolle = false;
+   path1 = "Fall2R10.csv";
+   path2 = "Fall2R10t.csv";
+
+   vx2 = 0;
+   vx1 = 0;
+   vy2 = 1;
+   vy1 = 0;
+   t02 = 0;
+   t01 = 0;
+   t00 = 0;
+   tend = 2;
+   Rflex = 1.0; L = 1; rho = 1.0; mu = 1.0;
+   dt = 1e-2;
+
+   // set Reibf to constant 10
+  }
+  else if (scenario == "exp2")
+  {
+    // Vergleich zweier Kabel mit unterschiedlichen Biegesteifigkeiten
+    ver = true;
+    reib = true;
+    winkelkontrolle = true;
+    path1 = "exp2.csv";
+    path2 = "exp2.csv";
+
+    vx2 = 6;
+    vx1 = 3;
+    vy2 = 0;
+    vy1 = 0;
+    t02 = 0;
+    t01 = M_PI/2.;
+    t00 = 0;
+    tend = 1.0;
+
+    start_winkel = 0;
+
+    Rflex = 1.0; // 1.0 or 5.0
+    L = 1; rho = 1.0; mu = 0.3;
+    dt = 1e-2;
+  }
+  else if (scenario == "realtime")
   {
     //eigener Fall
     ver = true;
@@ -121,7 +223,7 @@ int main()
     t01 = 0;
     t00 = 0;
   }
-  if (scenario == "1")
+  else if (scenario == "1")
   {
     //1. Fall
     ver = true;
@@ -174,7 +276,7 @@ int main()
    t01 = 0;
    t00 = 0;
    tend = 0.5;
-   Rflex = 1.0; L = 1; rho = 1.0; mu = 0.3;
+   Rflex = 1.0; L = 1; rho = 1.0; mu = 1.0;
    // set Reibf to constant 10
   }
   else if (scenario == "3")
@@ -232,24 +334,34 @@ int main()
    t01 = 1.6;
    t00 = 0;
    tend = 1.0;
-   Rflex = 5.0; // 1.0
+   Rflex = 5.0; // 1.0 or 5.0
    L = 1; rho = 1.0; mu = 0.3;
   }
   else if (scenario == "6")
   {
+    vector<double> thetaN(n + 1);
+    vector<double> thetaNp(n + 1);
+    for (int i = 0; i < n+1; i++)
+    {
+      thetaN[i] = start_winkel;
+      thetaNp[i] = 0.0;
+    }
 
-   //Euler
-   string path1 = "ErgebnisseEuler_horizontal_nach_oben_v9_n8_reib.csv";
-   string path2 = "ErgebnisseEuler_horizontal_nach_oben_v9_n8_reibt.csv";
-   remove(path1.c_str());
-   remove(path2.c_str());
-   save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-   euler(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN, thetaNp,
-   iter, t0, path1, path2, dt, tend);
-   finish(t1, path1);
+    //Euler
+    string path1 = "ErgebnisseEuler_horizontal_nach_oben_v9_n8_reib.csv";
+    string path2 = "ErgebnisseEuler_horizontal_nach_oben_v9_n8_reibt.csv";
+    remove(path1.c_str());
+    remove(path2.c_str());
+    save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
+    euler(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN, thetaNp,
+    iter, t0, path1, path2, dt, tend);
+    finish(t1, path1);
 
-   exit(0);
+    exit(0);
   }
+
+  // load look-up table for displacements and angles
+
 
   // print information
   double h = L/n;
@@ -262,6 +374,14 @@ int main()
 
   // save options
   save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
+
+  vector<double> thetaN(n + 1);
+  vector<double> thetaNp(n + 1);
+  for (int i = 0; i < n+1; i++)
+  {
+    thetaN[i] = start_winkel;
+    thetaNp[i] = 0.0;
+  }
 
   // run simulation
   rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,

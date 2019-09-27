@@ -7,6 +7,7 @@ using namespace std;
 // Definition aller globalen Variablen, die intern für die Berechnung
 // als Zwischenspeicher verwendet werden
 
+extern double tend;
 extern vector<vector<vector<double>>> Am;
 extern vector<vector<vector<double>>> Bm;
 extern vector<vector<double>> Zm;

@@ -21,3 +21,7 @@ void save(int n, double Rflex, double L, double rho, double mu,
 
 //Speichert die Zeitdifferent aus t1 und der aktuellen Zeit in einer csv Datei am Ort path
 void finish(std::chrono::time_point<std::chrono::steady_clock> t1, string path);
+
+//Load look-up table containing prescribed displacements and angles for the gripper position
+//File format is csv based with separator ",", each line contains: t,x,y,phi,x',y',phi',x'',y'',phi'' (i.e. also 1st and 2nd derivatives)
+void loadLUT(std::string path);

@@ -101,20 +101,43 @@ show_plots = True
 #if len(sys.argv) > 1:
 #  show_plots = False;
 
-fig = plt.figure()
+plt.rcParams.update({'font.size': 14})
+plt.rcParams['lines.linewidth'] = 2
+
+#fig = plt.figure(figsize=(10,3))  # exp2
+#fig = plt.figure(figsize=(2,4))   # exp1
+fig = plt.figure(figsize=(4,4))    # white2
+plt.tight_layout()
 ax = plt.axes()
 #ax.grid(which='both')
 
-ax.plot([x for [x,y] in versch_list], [y for [x,y] in versch_list], "o-") 
+t_stride = 100   # white2
+t_stride = 50   # tube
+#t_stride = 10   # exp2
+#t_stride = 20  # exp1
+
+#ax.plot([-1.2,1.2],[0,0],"o",color="w")  # exp1
+#ax.plot([0,0],[-1.2,1.2],"o",color="w")  # exp2
+
+# start point
+ax.plot([x for [x,y] in versch_list[::t_stride]], [y for [x,y] in versch_list[::t_stride]], "o-")
 
 for i,t in enumerate(t_list):
-  if i % 10 == 0:
-    ax.plot([x for [x,y] in points_list[i]], [y for [x,y] in points_list[i]], color=(0.5,0.5,0.5), label=t)
+  if i % t_stride == 0:
+    #ax.plot([x for [x,y] in points_list[i]], [y for [x,y] in points_list[i]], color=(0.5,0.5,0.5), label=t)
+    ax.plot([x for [x,y] in points_list[i]], [y for [x,y] in points_list[i]], label=t)
 
-plt.title(description)
+#ax.plot([x for [x,y] in points_list[0]], [y for [x,y] in points_list[0]], color='r', label=t)
+
+
+# end points
+ax.plot([points_list[i][-1][0] for i in range(len(points_list))], [points_list[i][-1][1] for i in range(len(points_list))], "--", color='grey')
+
+#plt.title(description)
 plt.axes().set_aspect('equal', 'datalim')
-ax.set_xlabel("x")
-ax.set_ylabel("y")
+#ax.set_xlabel("x")
+#ax.set_ylabel("y")
+plt.savefig("a.png")
 #plt.show()
 
 # animate
@@ -135,5 +158,5 @@ ax1.set_ylim(ax.get_ylim())
 ax1.set_aspect('equal')
 title = ax1.text(0.1,ax1.get_ylim()[1]*0.8,"t")
 line_ani = animation.FuncAnimation(fig1, update_line, len(points_list), fargs=[line1,title,len(points_list)],
-                                   interval=2e3/len(points_list), blit=True)
+                                   interval=t_list[-1]*1e3/len(points_list), blit=True)
 plt.show()

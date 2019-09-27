@@ -447,7 +447,7 @@ double V(int r, int j, vector<double> &thetaN, vector<double> &thetaNp,
   double ki;
   double xpki;
   double ypki;
-  vector<double> temp;
+  array<double,2> prescribed_displacement;
   for (int i = 0; i < imax; i++) {
     ki = i * h;
     xpki = 0;
@@ -457,9 +457,9 @@ double V(int r, int j, vector<double> &thetaN, vector<double> &thetaNp,
       ypki = ypki + thetaNp[k] * CosInt(k, ki, h, hInv, thetaN, iter);
     }
 
-    temp = dversch(ki, t);
-    xpki = xpki + temp[0];
-    ypki = ypki + temp[1];
+    prescribed_displacement = dversch(ki, t);
+    xpki = xpki + prescribed_displacement[0];
+    ypki = ypki + prescribed_displacement[1];
     if ((xpki * xpki + ypki * ypki) != 0)
       out = out
           - Reibf(ki, h, rho) * mu
@@ -514,7 +514,7 @@ double u(int r, vector<double> &thetaN, vector<double> &thetaNp, int iter,
   double ki;
   double xpki;
   double ypki;
-  vector<double> temp;
+  array<double,2> d_displacement;
   for (int i = 0; i < imax; ++i) {
     ki = i * h;
     xpki = 0;
@@ -524,14 +524,14 @@ double u(int r, vector<double> &thetaN, vector<double> &thetaNp, int iter,
       ypki = ypki + thetaNp[k] * CosInt(k, ki, h, hInv, thetaN, iter);
     }
 
-    temp = dversch(ki, t);
-    xpki = xpki + temp[0];
-    ypki = ypki + temp[1];
+    d_displacement = dversch(ki, t);
+    xpki = xpki + d_displacement[0];
+    ypki = ypki + d_displacement[1];
     if ((xpki * xpki + ypki * ypki) != 0)
       out = out
           - Reibf(ki, h, rho) * mu
-              * (-temp[0] * SinInt(r, ki, h, hInv, thetaN, iter)
-                  + temp[1] * CosInt(r, ki, h, hInv, thetaN, iter))
+              * (-d_displacement[0] * SinInt(r, ki, h, hInv, thetaN, iter)
+                  + d_displacement[1] * CosInt(r, ki, h, hInv, thetaN, iter))
               / sqrt(xpki * xpki + ypki * ypki);
 
   }
