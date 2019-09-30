@@ -6,23 +6,19 @@
 
 using namespace std;
 
-//Simpsonsumme zur Berechnung des Integrals der Funktion f(x) von x0 bis xend
-//Anzahl der Intervalle: iter
-//double Integral(const function<double(double)> &f, double x0, double xend, int iter);
-
-//! Archimedes-Quadratur 1D, adaptiv, Überschuss d.h. f(a)=f(b)=0
+//! adaptive Archimedes quadrature in 1D, this method only computes surplusses ∫_a^b f(s)ds, i.e. f(a)=f(b)=0, fa=f(a), fb=f(b)
 template<typename Fn, Fn *f, typename... Args>
 double archimedes1d_adaptive_surplus(double a, double b, double fa, double fb, int level, Args&&... args)
 {
-  double x_middle = 0.5*(a + b);             // Mittelpunkt des Intervalls
-  double f_middle = f(x_middle, std::forward<Args>(args)...);            // Auswertung der Funktion in der Mitte des Intervalls
-  double height = f_middle - 0.5*(fa + fb);  // Höhe des Dreiecks
+  double x_middle = 0.5*(a + b);             // middle point of the integration interval
+  double f_middle = f(x_middle, std::forward<Args>(args)...);            // evaluate integrand at center of interval
+  double height = f_middle - 0.5*(fa + fb);  // height of triangle
 
   double height_ba = height * (b-a);
   
   const double epsilon = 1e-5;   // error tolerance
 
-  if (level >= 3 || fabs(height_ba) < epsilon)    // Abbruchkriterium
+  if (level >= 3 || fabs(height_ba) < epsilon)    // recursion end criterion
   {
     return 0.5 * 4./3. * height_ba;
   }
@@ -38,12 +34,10 @@ double archimedes1d_adaptive_surplus(double a, double b, double fa, double fb, i
 /** Compute numerical integral of f over the domain [x0,xend]
  * @param x0 begin of integration interval
  * @param xend end of integration interval
- * @param iter number of iterations for composite simpson
- * @param fa   integrand evaluated at x0
- *
+ * @param fa   integrand evaluated at x0, sometimes this is known and can be hardcoded to avoid function calls
  */
 template<typename Fn, Fn *f, typename... Args>
-double Integral_(double x0, double xend, int iter, double fa, Args&&... args)
+double Integral_(double x0, double xend, double fa, Args&&... args)
 {
 #if 0
   // normal simpson rule
@@ -57,6 +51,7 @@ double Integral_(double x0, double xend, int iter, double fa, Args&&... args)
 
 #if 0
   // composite simpson rule
+  const int iter = 14;   // number of sampling points
   double erg;
   double l = (xend - x0);
   double h = l / iter;
@@ -83,11 +78,11 @@ double Integral_(double x0, double xend, int iter, double fa, Args&&... args)
 }
 
 #define Integral(FUNC, ...) Integral_<decltype(FUNC), FUNC>(__VA_ARGS__)
-// Verwendung:
-// Beispiel: zu integrierende Funktion cos(a*x + b) mit Parametern a und b:
+// usage:
+// example: function to integrate is cos(a*x + b) with parameters a and b
 //
 // double function(double x, double a, double b) {
 //   return cos(a*x + b);
 // }
 // ...
-// Integral(function, x0, xend, iter, a, b);
+// Integral(function, x0, xend, function(x,a,b), a, b);

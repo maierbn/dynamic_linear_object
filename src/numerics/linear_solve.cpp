@@ -8,16 +8,24 @@
 
 using namespace alglib;
 
-vector<double> solve(vector<vector<double>> &A, vector<double> &b) {
-  //berechnet den Lösungsvektor x des LGS Ax=b
+vector<double> solve(vector<vector<double>> &A, vector<double> &b)
+{
+  // solve linear system Ax = b for x
+
   int n = b.size();
   vector<double> x(n);
+
+  // populate A
   Adata.resize(n * n);
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
+  for (int i = 0; i < n; i++)
+  {
+    for (int j = 0; j < n; j++)
+    {
       Adata[i * n + j] = A[i][j];
     }
   }
+
+  // define helper vectors
   real_2d_array h;
   real_1d_array xl;
   real_1d_array rhs;
@@ -29,9 +37,12 @@ vector<double> solve(vector<vector<double>> &A, vector<double> &b) {
   ae_int_t info = 0;
   densesolverreport rep;
 
+  // solve system
   rmatrixsolve(h, n, rhs, info, rep, xl);
-  for (int i = 0; i < n; ++i) {
 
+  // assign result
+  for (int i = 0; i < n; ++i)
+  {
     x[i] = xl[i];
   }
   return x;

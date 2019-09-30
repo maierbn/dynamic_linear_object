@@ -1,12 +1,13 @@
 /*
  * main.cpp
  *
- *  Created on: 17.01.2019
- *      Author: mariu, maierbn
+ *  Created on: 17.01.2019, revised 30.09.2019
+ *      Author: Marius Stach, Benjamin Maier
  */
 #include <vector>
 #include <iostream>
 #include <ctime>
+#include <cstdlib>
 #include <cmath>
 #include <omp.h>
 #include <chrono>
@@ -19,637 +20,258 @@
 #include "terms/globals.h"
 
 using namespace std;
-/*
-double func(double x)
-{
-  return 1./sin(x) + cos(x);
-  integral x=0.5 to 1.5, correct result: 1.81237
-}
-*/
 
-int main()
-{
-
-  // start duration measurement
-  std::chrono::time_point<std::chrono::steady_clock> t1 = std::chrono::steady_clock::now();
-
-  //Main part
-  //Eingabe durch den Benutzer
-
-  // material parameters
-  double radius = 10e-3;                                         // Radius [m]
-  double flaechentraegheitsmoment = M_PI*pow(radius,4) / 4.0;    // Flächenträgheitsmoment [m^4] für kreiförmigen Querschnitt
-  double emodul = 2e6;                      // E-Modul [N/m^2] = [Pa]
-
-  double Rflex = emodul*flaechentraegheitsmoment;      // Biegesteifigkeit [N/rad] [Nm^2]
-  double L = 0.15;                   // Länge [m]
-  double querschnitt = M_PI * pow(radius, 2);
-  double rho = 7850.0 * querschnitt;        // Dichte * Querschnitt   [kg/m^3]*[m^2] = [kg/m]
-  double mu = 0.8;                  // Reibungsbeiwert [-]
-
-/*
- L      [m]         1   *0.15       8.84
- Rflex  [Nm^2]      1    0.0225     78.18
- rho    [kg/m]      1    6.666     *0.1130
- * = reference
+/** All parameters that are needed to specify a simulation.
  */
+struct SimulationConfiguration
 {
-  //Marius Ausarbeitung standardwerte
-	int n = 8;
-	double Rflex = 1.0;
-	double L = 1;
-	double rho =1.0;
-	double mu = 0.3;
-  double dt = 8.3333e-4;
-  int iter = 80;
-}
-  // numeric parameters
-  int n = 3;                        // Anzahl Elemente
-  double t0 = 0;
-  tend = 5;  // 0.5
-  double dt = 1e-4;      // Zeitschrittweite für RK4
-  int iter = 8;          // Anzahl Internvalle in Simpson-Summe
-  useSmoothFunction = false;
+  bool enablePrescribedDisplacement = false;  ///< if there are prescribed displacements of the start point P0
+  bool enableFriction = true;                 ///< if friction is enabled, if set to false, value of mu is not considered
+  bool enablePrescribedAngle = true;          ///< if there is a prescribed angle at the start point P0, \hat\theta
+  std::string outputFilename;                 ///< file name of the output file
 
-  //Rflex = 1.0; L = 1; rho = 1.0; mu = 0.3; tend = 0.5;
-  //dt = 8.3333e-4;
-  //n = 8;
+  // parameters of the prescribed displacement:
+  // displacement(t) = v2 * t^2 + v1 * t,    where v2 = (vx2,vy2), v1 = (vx1,vy1)
+  double vx1;
+  double vy1;
+  double vx2;
+  double vy2;
+  bool enableSmoothVelocityProfile = false;   ///< if the prescribed velocity follows a smooth velocity profile with u(0)=u'(0)=u''(0)=u'''(0) = u(tend)=u'(tend)=u''(tend)=u'''(tend) = 0
 
-  bool ver;
-  bool reib;
-  bool winkelkontrolle;
-  string path1;
-  string path2;
+  // parameters of the prescribed angle:
+  // theta0(t) = t02 * t^2 + t01 * t + t00
+  double t02;
+  double t01;
+  double t00;
+  double initialAngle;                        ///< the initial angle at which the object is positioned
 
-  // Startwerte
-  double start_winkel = M_PI;
+  double rho;      ///< linear density, mass per cross section area
+  double L;        ///< length of the linear object
+  double Rflex;    ///< flexural rigidity
+  double mu;       ///< constant friction coefficient
 
-  //cout << omp_get_max_threads() << " Threads." << endl;
+  int n;           ///< number of Finite Elements
+  double dt;       ///< time step width
+  double tend;     ///< end time of the simulation
 
-// aufgeprägte Verschiebung:
-// verschiebung(t) = v2 * t^2 + v1 * t,    mit v2=(vx2,vy2), v1=(vx1,vy1)
-// geschwindigkeit(t) = 2*v2 * t + v1
-// beschleunigung(t) = 2*v2
-
-// aufgeprägter Winkel:
-// theta0(t) = t02 * t^2 + t01 * t + t00
-
-  std::string scenario = "tube4";
-
-  if (scenario == "white2")
+  void runSimulation()
   {
-    //eigener Fall
-    ver = false;
-    reib = true;
-    winkelkontrolle = true;
-    path1 = "white2.csv";
-    path2 = "white2t.csv";
+    // start duration measurement
+    std::chrono::time_point<std::chrono::steady_clock> t1 = std::chrono::steady_clock::now();
 
-    vx1 = 0;    // 0.1 = 0.5m / 5s
-    vy1 = 0;
-    vx2 = 0;
-    vy2 = 0;
+    // print information
+    double h = L/n;
+    cout << "output file: " << outputFilename << endl
+      << "n: " << n << ", dt: " << dt << ", tend: " << tend << ", L: " << L << " m, Rflex: " << Rflex << " N*m^2, rho: "
+      << rho << " kg/m" << ", h: " << h << ", rho*h: " << rho*h << " kg, ReibF: " << frictionForce(L/2., h, rho) << endl;
 
-    t02 = 0;
-    t01 = M_PI / 10.0;
-    t00 = M_PI;
-    start_winkel = M_PI;
-    useSmoothFunction = false;
+    // delete existing output files
+    remove(outputFilename.c_str());
 
-    double length = 44.5e-2;  // [m]
-    double weight = 8e-3;    // [kg]
+    // save options
+    save(n, Rflex, L, rho, mu, enablePrescribedDisplacement, enableFriction, enablePrescribedAngle, outputFilename);
 
-    rho = weight / length;
-    L = 40e-2;
-    Rflex = 9e-4;
-    mu = 0.3;
-    dt = 5e-3;
+    // initialize global values for problem definition
+    ::vx1 = vx1;
+    ::vy1 = vy1;
+    ::vx2 = vx2;
+    ::vy2 = vy2;
+    ::t00 = t00;
+    ::t01 = t01;
+    ::t02 = t02;
+    ::enableSmoothVelocityProfile = enableSmoothVelocityProfile;
+    ::tend = tend;
 
-    tend = 10;
-  }
-  else if (scenario == "tube4")
-  {
-    //eigener Fall
-    ver = true;
-    reib = true;
-    winkelkontrolle = true;
-    path1 = "tube4.csv";
-    path2 = "tube4t.csv";
-
-    vx1 = 0.4 / 4;    // 0.70m / 4s
-    vy1 = -0.1 / 4;   // 0.20m / 4s
-    vx2 = 0;
-    vy2 = 0;
-
-    t02 = 0;
-    t01 = M_PI_2*1.5 / 4.0;
-    t00 = M_PI;
-    start_winkel = M_PI;
-
-    double length = 80e-2;  // [m]
-    double weight = 120e-3;    // [kg]
-
-    rho = weight / length;
-    L = length;
-    Rflex = 5e-2;
-    mu = 0.6;
-    dt = 1e-2;
-    tend = 4;
-    useSmoothFunction = true;
-    n = 3;
-  }
-  else if (scenario == "exp1")
-  {
-
-   // Ausarbeitung Fall 1: Reine Verschiebung
-   ver = true;
-   reib = true;     // false
-   winkelkontrolle = false;
-   path1 = "Fall2R10.csv";
-   path2 = "Fall2R10t.csv";
-
-   vx2 = 0;
-   vx1 = 0;
-   vy2 = 1;
-   vy1 = 0;
-   t02 = 0;
-   t01 = 0;
-   t00 = 0;
-   tend = 2;
-   Rflex = 1.0; L = 1; rho = 1.0; mu = 1.0;
-   dt = 1e-2;
-
-   // set Reibf to constant 10
-  }
-  else if (scenario == "exp2")
-  {
-    // Vergleich zweier Kabel mit unterschiedlichen Biegesteifigkeiten
-    ver = true;
-    reib = true;
-    winkelkontrolle = true;
-    path1 = "exp2.csv";
-    path2 = "exp2.csv";
-
-    vx2 = 6;
-    vx1 = 3;
-    vy2 = 0;
-    vy1 = 0;
-    t02 = 0;
-    t01 = M_PI/2.;
-    t00 = 0;
-    tend = 1.0;
-
-    start_winkel = 0;
-
-    Rflex = 1.0; // 1.0 or 5.0
-    L = 1; rho = 1.0; mu = 0.3;
-    dt = 1e-2;
-  }
-  else if (scenario == "realtime")
-  {
-    //eigener Fall
-    ver = true;
-    reib = true;
-    winkelkontrolle = false;
-    path1 = "Fallneu.csv";
-    path2 = "Fallneut.csv";
-
-    vx1 = 0;    // 0.1 = 0.5m / 5s
-    vy1 = -0.1;
-    vx2 = 0;
-    vy2 = 0;
-
-    t02 = 0;
-    t01 = 0;
-    t00 = 0;
-  }
-  else if (scenario == "1")
-  {
-    //1. Fall
-    ver = true;
-    reib = false;
-    winkelkontrolle = false;
-    path1 = "Fall1t5.csv";
-    path2 = "Fall1t5t.csv";
-
-    vx2 = 0;
-    vx1 = 0;
-    vy2 = 0.2;
-    vy1 = 0;
-    t02 = 0;
-    t01 = 0;
-    t00 = 0;
-  }
-  else if (scenario == "1.5")
-  {
-
-    //1,5. Fall lineare Bewegung
-    ver = true;
-    reib = true;
-    winkelkontrolle = false;
-    path1 = "Fall1lint5rho1000R05.csv";
-    path2 = "Fall1lint5rho1000R05t.csv";
-
-    vx2 = 0;
-    vx1 = 0;
-    vy2 = 0;
-    vy1 = 1;
-    t02 = 0;
-    t01 = 0;
-    t00 = 0;
-  }
-  else if (scenario == "2")
-  {
-
-   // Ausarbeitung Fall 1: Reine Verschiebung
-   ver = true;
-   reib = true;     // false
-   winkelkontrolle = false;
-   path1 = "Fall2R10.csv";
-   path2 = "Fall2R10t.csv";
-
-   vx2 = 0;
-   vx1 = 0;
-   vy2 = 18;
-   vy1 = 0;
-   t02 = 0;
-   t01 = 0;
-   t00 = 0;
-   tend = 0.5;
-   Rflex = 1.0; L = 1; rho = 1.0; mu = 1.0;
-   // set Reibf to constant 10
-  }
-  else if (scenario == "3")
-  {
-
-    //3. Fall
-    ver = true;
-    reib = true;
-    winkelkontrolle = true;
-    path1 = "Fall3Reibung.csv";
-    path2 = "Fall3Reibungt.csv";
-
-    vx2 = 0;
-    vx1 = 6;
-    vy2 = 16;
-    vy1 = 0;
-    t02 = 0;
-    t01 = -4.7;
-    t00 = 0;
-  }
-  else if (scenario == "4")
-  {
-
-   // Ausarbeitung Fall 2: Reine Verdrehung
-   ver = false;
-   reib = false;
-   winkelkontrolle = true;
-   path1 = "Fall4t075.csv";
-   path2 = "Fall4t075t.csv";
-   vx2 = 0;
-   vx1 = 0;
-   vy2 = 0;
-   vy1 = 0;
-   t02 = 6;
-   t01 = 3;
-   t00 = 0;
-   tend = 1.0;
-   Rflex = 1.0; L = 1; rho = 1.0; mu = 0.3;
-  }
-  else if (scenario == "5")
-  {
-
-   //Ausarbeitung Fall 4: Vergleich zweier Kabel mit unterschiedlichen Biegesteifigkeiten
-   ver = true;
-   reib = true;
-   winkelkontrolle = true;
-   path1 = "Fall5R5n8.csv";
-   path2 = "Fall5R5n8t.csv";
-
-   vx2 = 6;
-   vx1 = 3;
-   vy2 = 0;
-   vy1 = 0;
-   t02 = 0;
-   t01 = 1.6;
-   t00 = 0;
-   tend = 1.0;
-   Rflex = 5.0; // 1.0 or 5.0
-   L = 1; rho = 1.0; mu = 0.3;
-  }
-  else if (scenario == "6")
-  {
-    vector<double> thetaN(n + 1);
-    vector<double> thetaNp(n + 1);
+    // initialize variables
+    vector<double> thetaN(n + 1);     ///< vector of degrees of freedom, \Theta_n
+    vector<double> thetaNp(n + 1);    ///< first derivative of degrees of freedom, \omega_n = \Theta_n'
     for (int i = 0; i < n+1; i++)
     {
-      thetaN[i] = start_winkel;
+      thetaN[i] = initialAngle;
       thetaNp[i] = 0.0;
     }
 
-    //Euler
-    string path1 = "ErgebnisseEuler_horizontal_nach_oben_v9_n8_reib.csv";
-    string path2 = "ErgebnisseEuler_horizontal_nach_oben_v9_n8_reibt.csv";
-    remove(path1.c_str());
-    remove(path2.c_str());
-    save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-    euler(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN, thetaNp,
-    iter, t0, path1, path2, dt, tend);
-    finish(t1, path1);
+    // run time stepping scheme
+    rungeKutta4(n, Rflex, L, rho, mu, enablePrescribedDisplacement, enableFriction, enablePrescribedAngle, thetaN,
+      thetaNp, outputFilename, dt, tend);
 
-    exit(0);
+    // finalize output file and measure duration
+    finalize(t1, outputFilename);
   }
+};
 
-  // load look-up table for displacements and angles
+int main()
+{
+  // define, which scenario should be run
+  std::string scenario = "experiment4";       // set this to experiment1 - experiment4 to reproduce the simulations of the paper
 
+  std::cout << "Scenario " << scenario << " ";
 
-  // print information
-  double h = L/n;
-  cout << "scenario " << scenario << ", output: " << path1 << endl;
-  cout << "n: " << n << ", dt: " << dt << ", tend: " << tend << ", L: " << L << " m, Rflex: " << Rflex << " N*m^2, rho: " << rho << " kg/m" << ", h: " << h << ", rho*h: " << rho*h << " kg, ReibF: " << Reibf(L/2., h, rho) << endl;
+  SimulationConfiguration s;
 
-  // delete existing output files
-  remove(path1.c_str());
-  remove(path2.c_str());
-
-  // save options
-  save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-
-  vector<double> thetaN(n + 1);
-  vector<double> thetaNp(n + 1);
-  for (int i = 0; i < n+1; i++)
+  if (scenario == "experiment1")
   {
-    thetaN[i] = start_winkel;
-    thetaNp[i] = 0.0;
+    // Experiment #1: Demonstrate effects of friction
+
+    // problem definition
+    s.enablePrescribedDisplacement = true;
+    s.enableFriction = true;     // false
+    s.enablePrescribedAngle = false;
+    s.outputFilename = "experiment1.csv";
+
+    // prescribed displacement:
+    // displacement(t) = v2 * t^2 + v1 * t,    where v2 = (vx2,vy2), v1 = (vx1,vy1)
+    s.vx2 = 0;
+    s.vx1 = 0;
+    s.vy2 = 1;
+    s.vy1 = 0;
+
+    // prescribed angle:
+    // theta0(t) = t02 * t^2 + t01 * t + t00
+    s.t02 = 0;
+    s.t01 = 0;
+    s.t00 = 0;
+
+    // material parameters
+    s.Rflex = 1.0;             // flexural rigidity [Nm^2]
+    s.L = 1;                   // length [m]
+    s.rho = 1.0;               // linear density (density * cross section area)  [kg/m^3]*[m^2] = [kg/m]
+    s.mu = 1.0;                // sliding friction coefficient [-]
+
+    // numeric parameters
+    s.n = 3;                   // number of Finite Elements [-]
+    s.dt = 1e-2;               // time step width [s]
+    s.tend = 2;                // end time [s]
+
+    s.runSimulation();
+  }
+  else if (scenario == "experiment2")
+  {
+    // Experiment #2: Demonstrate effects of flexural rigidity
+
+    // problem definition
+    s.enablePrescribedDisplacement = true;
+    s.enableFriction = true;
+    s.enablePrescribedAngle = true;
+    s.outputFilename = "experiment2.csv";
+
+    // prescribed displacement:
+    // displacement(t) = v2 * t^2 + v1 * t,    where v2 = (vx2,vy2), v1 = (vx1,vy1)
+    s.vx2 = 6;
+    s.vx1 = 3;
+    s.vy2 = 0;
+    s.vy1 = 0;
+
+    // prescribed angle:
+    // theta0(t) = t02 * t^2 + t01 * t + t00
+    s.t02 = 0;
+    s.t01 = M_PI/2.;
+    s.t00 = 0;
+
+    s.initialAngle = 0;
+
+    // material parameters
+    s.Rflex = 1.0; // 1.0 or 5.0      flexural rigidity [Nm^2]
+    s.L = 1;                   // length [m]
+    s.rho = 1.0;               // linear density (density * cross section area)  [kg/m^3]*[m^2] = [kg/m]
+    s.mu = 0.3;                // sliding friction coefficient [-]
+
+    // numeric parameters
+    s.n = 3;                   // number of Finite Elements [-]
+    s.dt = 1e-2;               // time step width [s]
+    s.tend = 1.0;              // end time [s]
+
+    s.runSimulation();
+  }
+  else if (scenario == "experiment3")
+  {
+    // Experiment #3: Rotation of white cable
+
+    // problem definition
+    s.enablePrescribedDisplacement = false;
+    s.enableFriction = true;
+    s.enablePrescribedAngle = true;
+    s.outputFilename = "experiment3.csv";
+
+    // prescribed displacement:
+    // displacement(t) = v2 * t^2 + v1 * t,    where v2 = (vx2,vy2), v1 = (vx1,vy1)
+    s.vx1 = 0;
+    s.vy1 = 0;
+    s.vx2 = 0;
+    s.vy2 = 0;
+
+    // prescribed angle:
+    // theta0(t) = t02 * t^2 + t01 * t + t00
+    s.t02 = 0;
+    s.t01 = M_PI / 10.0;
+    s.t00 = M_PI;
+    s.initialAngle = M_PI;
+    s.enableSmoothVelocityProfile = false;
+
+    // material parameters
+    double length = 44.5e-2;  // [m]
+    double weight = 8e-3;    // [kg]
+
+    s.rho = weight / length;   // linear density (density * cross section area)  [kg/m^3]*[m^2] = [kg/m]
+    s.L = 40e-2;               // length [m]
+    s.Rflex = 9e-4;            // flexural rigidity [Nm^2]
+    s.mu = 0.3;                // sliding friction coefficient [-]
+
+    // numeric parameters
+    s.n = 3;                   // number of Finite Elements [-]
+    s.tend = 10;               // end time [s]
+    s.dt = 5e-3;               // time step width [s]
+
+    s.runSimulation();
+  }
+  else if (scenario == "experiment4")
+  {
+    // Experiment #4: Movement and rotation of flexible tube
+
+    // problem definition
+    s.enablePrescribedDisplacement = true;
+    s.enableFriction = true;
+    s.enablePrescribedAngle = true;
+    s.outputFilename = "experiment4.csv";
+
+    // prescribed displacement:
+    // displacement(t) = v2 * t^2 + v1 * t,    where v2 = (vx2,vy2), v1 = (vx1,vy1)
+    s.vx1 = 0.4 / 4;
+    s.vy1 = -0.1 / 4;
+    s.vx2 = 0;
+    s.vy2 = 0;
+
+    // prescribed angle:
+    // theta0(t) = t02 * t^2 + t01 * t + t00
+    s.t02 = 0;
+    s.t01 = M_PI_2*1.5 / 4.0;
+    s.t00 = M_PI;
+    s.initialAngle = M_PI;
+    s.enableSmoothVelocityProfile = true;
+
+    // material parameters
+    double length = 80e-2;  // [m]
+    double weight = 120e-3;    // [kg]
+
+    s.rho = weight / length;    // linear density (density * cross section area)  [kg/m^3]*[m^2] = [kg/m]
+    s.L = length;               // length [m]
+    s.Rflex = 5e-2;             // flexural rigidity [Nm^2]
+    s.mu = 0.6;                 // sliding friction coefficient [-]
+
+    // numeric parameters
+    s.n = 3;                   // number of Finite Elements [-]
+    s.dt = 1e-2;               // time step width [s]
+    s.tend = 4;                // end time [s]
+
+    s.runSimulation();
   }
 
-  // run simulation
-  rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
-    thetaNp, iter, t0, path1, path2, dt, tend);
-
-  // finalize output file and measure duration
-  finish(t1, path1);
-
-  cout << "now call ./plot.py " << path1 << endl;
+  // call python visualization script with output file name
+  cout << "Now, for visualization call:       ./plot.py " << s.outputFilename << endl;
 
   std::stringstream command;
-  command << "./plot.py " << path1;
+  command << "./plot.py " << s.outputFilename;
   int ret = system(command.str().c_str()); ret++;
 
-  /*
-   //RungeKutta
-   t1 = time(0);
-   string path1 = "ErgebnisseRK4_horizontal_nach_oben_v9_reib.csv";
-   string path2 = "ErgebnisseRK4_horizontal_nach_oben_v9_reibt.csv";
-   remove(path1.c_str());
-   remove(path2.c_str());
-
-   wdh = 600;
-   save(n, Rflex, L, rho, mu, iter, ver, reib, winkelkontrolle, path1);
-   rungeKutta4(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, thetaN,
-   thetaNp, iter, t0, path1, path2, dt, tend);
-   finish(t1, path1);
-   */
-
-  /*
-   //Test von Alglib
-   real_2d_arrayh;
-   vector<double> a(9);
-   a[0] = 4;
-   a[1] = 5;
-   a[2] = -2;
-   a[3] = 7;
-   a[4] = -1;
-   a[5] = 2;
-   a[6] = 3;
-   a[7] = 1;
-   a[8] = 4;
-   h.attach_to_ptr(3, 3, a.data());
-   vector<double> rhs(3);
-   rhs[0] = -14;
-   rhs[1] = 42;
-   rhs[2] = 28;
-   real_1d_arrayr;
-   r.attach_to_ptr(3, rhs.data());
-   real_1d_arrayx;
-   vector<double> xlsg(3);
-   x.attach_to_ptr(3, xlsg.data());
-   int info = 0;
-   densesolverreport rep;
-   rmatrixsolve(h, 3, r, info, rep, x);
-   cout << info << " " << rep.r1 << " " << rep.rinf << endl;
-   for (int i = 0; i < 3; ++i) {
-   cout << x(i) << endl;
-   }
-   save(x, path);
-   vector<double> lhs(3);
-   lhs[0] = -14;
-   lhs[1] = 42;
-   lhs[2] = 28;
-   real_1d_arrayp;
-   vector<vector<double>> A(3);
-   A = K(2, 1, 0.5);
-   plotteMatrix(A);
-   vector<double> c = multipl(A, lhs);
-   p.attach_to_ptr(3, c.data());
-   save(p, path);
-
-   */
-
-  /*
-   // Test von step
-   vector<double> thetaN;
-   thetaN.resize(3);
-   thetaN[0] = 1;
-   thetaN[1] = 2;
-   thetaN[2] = 3;
-   vector<double> thetaNp;
-   thetaNp.resize(3);
-   thetaNp[0] = 1;
-   thetaNp[1] = 2;
-   thetaNp[2] = 3;
-   int n = 2;
-   int iter = 100;
-   double rho = 1;
-   double l = 1;
-   double h = l / n;
-   double mu = 0.3;
-   double t = 0;
-   double Rflex = 1;
-   double tau = 0;
-   bool ver = true;
-   bool reib = true;
-   bool winkelkontrolle = false;
-   string path = "";
-   time_t t1 = time(0);
-   vector<double> test;
-   for (int w = 0; w < 1; ++w) {
-
-   test = step(n, Rflex, l, rho, mu, ver, reib,
-   winkelkontrolle, thetaN, thetaNp, iter, t, path);
-   }
-   cout << time(0) - t1 << endl;
-   for (int var = 0; var < (n + 1); ++var) {
-   cout << test[var] << endl;
-   }*/
-
-  /*
-
-
-   //TEst von uvek,verschvek
-   vector<double> thetaN;
-   thetaN.resize(3);
-   thetaN[0] = 0;
-   thetaN[1] = 5;
-   thetaN[2] = 8;
-   vector<double> thetaNp;
-   thetaNp.resize(3);
-   thetaNp[0] = 0;
-   thetaNp[1] = 5;
-   thetaNp[2] = 1;
-   int n = 2;
-   int iter = 100;
-   double rho = 1;
-   double l = 1;
-   double h = l / n;
-   double mu = 0.3;
-   double t = 0.3;
-   vector<double> uvek;
-   vector<double> verschvek;
-   uvek = uVek(thetaN, thetaNp, h, l, mu, t, iter);
-   verschvek=verschVek(thetaN, thetaNp,
-   h,  l,  t,  rho,  iter);
-   for (int var = 0; var < (n+1); ++var) {
-   cout<<uvek[var]<<" "<<verschvek[var]<<endl;
-   }
-   */
-  /*
-   //Test von mZ bzw anderen Matrizen
-   vector<vector<vector<double>>> AMatrix;
-   vector<vector<vector<double>>> BMatrix;
-   vector<double> thetaN;
-   thetaN.resize(3);
-   thetaN[0] = 0;
-   thetaN[1] = 5;
-   thetaN[2] = 8;
-   vector<double> thetaNp;
-   thetaNp.resize(3);
-   thetaNp[0] = 0;
-   thetaNp[1] = 5;
-   thetaNp[2] = 1;
-   int n = 4;
-   int iter = 100;
-   //double rho = 1;
-   double l = 1;
-   double h = l / n;
-   double mu = 0.3;
-   double t = 0.3;
-   double rho = 1;
-   double Rflex=1;
-   AMatrix = A(1.0, 0.5, n, thetaN, iter);
-   BMatrix = B(1.0, 0.5, n, thetaN, iter);
-   vector<vector<double>> Test;
-   Test = computeMatrixZ(thetaN, thetaNp, rho,AMatrix,BMatrix);
-   plotteMatrix(Test);
-   Test= convertMMatrix(Test);
-   plotteMatrix(Test);
-   */
-
-  /*
-   //Test von B
-   vector<vector<vector<double>>> BMatrix;
-   vector<double> thetaN;
-   thetaN.resize(3);
-   thetaN[0] = 0;
-   thetaN[1] = 5;
-   thetaN[2] = 8;
-   int n = 2;
-   BMatrix = A(1.0, 0.5, n, thetaN, 200);
-   for (int k = 0; k <= n; k++) {
-   for (int i = 0; i <= n; i++) {
-   for (int j = 0; j <= n; j++) {
-   cout << BMatrix[i][j][k] << " ";
-   }
-   cout << endl;
-   }
-   cout << endl << endl;
-   }
-   */
-  /*
-   //Test von dSinIn
-   vector<double> thetaN;
-   thetaN.resize(3);
-   thetaN[0] = 0;
-   thetaN[1] = 5;
-   thetaN[2] = 8;
-   cout << SinInt( 1, 0.5, 0.5, thetaN, 200) << endl;
-   */
-
-  /*
-   //Test von m
-   vector<double> thetaN;
-   thetaN.resize(3);
-   thetaN[0] = 0;
-   thetaN[1] = 5;
-   thetaN[2] = 8;
-   cout << m(1, 1, 1, 0.5, thetaN, 1, 100) << endl;
-   */
-  /*
-   //Test von CosInt
-   vector<double> thetaN;
-   thetaN.resize(3);
-   thetaN[0]=0;
-   thetaN[1]=5;
-   thetaN[2]=8;
-   cout<<CosInt(1,0.5,0.5,thetaN,1000)<<endl;
-   */
-
-  /*
-   //Test von K
-   vector<vector<double>> KMatrix;
-   int N = 3;
-   double RFlex = 1;
-   double h = 1.0 / N;
-   KMatrix=K(N, RFlex, h);
-   plotteMatrix(KMatrix);
-   */
-
-  /*
-   //Test von Theta
-   double erg;
-   vector<double> vec;
-   vector<double> thetaN;
-   thetaN.resize(3);
-   thetaN[0]=0;
-   thetaN[1]=10;
-   thetaN[2]=8;
-   vec.resize(101);
-   for(int i=0;i<101;i++){
-   vec[i]=Theta(thetaN,0.5,i/100.0);
-   cout<<(cos(vec[i])*N(1,0.5,i/100.0))<<endl;
-   }
-   */
-
-  /*
-   //Test von floor
-   for (int i=0;i<=10;i++){
-   cout<<i<<floor(i*0.1);}
-   cout<<endl;
-   */
-
-  /*
-   //Test von N
-   double erg2;
-   N(0,0.5,0.25,erg2);
-   cout<<erg2<<endl;
-   */
-
-/*
-   //Test der Integralfunktion
-   double (*f)(double)=func;
-   double erg = Integral(func,0.5,1.5,10);
-   std::cout << erg <<endl ;
-*/
-
-  return 0;
+  return EXIT_SUCCESS;
 }

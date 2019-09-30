@@ -18,7 +18,6 @@ linalg.cpp \
 # specify the source files for the own project, these have to be in directory ../src
 FILES = \
 main.cpp \
-numerics/integral.cpp \
 numerics/linear_solve.cpp \
 numerics/timestepping.cpp \
 terms/globals.cpp \

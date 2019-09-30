@@ -1,12 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Visualize simulation results.
+# Some settings such as figure size and stride of timesteps are hardcoded and can be adjusted depending on the scenario
+#
+# usage:
+# ./plot.py <file.csv>
+
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-filename = "Fall3Reibung.csv"
+# parse filename from command line argument
+filename = "experiment3.csv"
 if len(sys.argv) >= 2:
   filename = sys.argv[1]
   
@@ -14,6 +21,7 @@ if len(sys.argv) >= 2:
 with open(filename,"r") as f:
   data = f.readlines()
   
+# get all the points of the state of the one-dimensional object for one time point, the points make up the line of the object
 def points(coefficients, parameters, versch, theta0):
   def N(i, h, s):
     if (i-1)*h < s < i*h:
@@ -41,7 +49,7 @@ def points(coefficients, parameters, versch, theta0):
     
     return c1*N1 + c2*N2
     
-  [n, Rflex, L, rho, mu, simpson_iter, ver, reib, winkelkontrolle, t00, t01, t02, vx1, vy1, vx2, vy2] = map((float),parameters)
+  [n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, t00, t01, t02, vx1, vy1, vx2, vy2] = map((float),parameters)
   h = L/n
   
   n_steps = 1000
@@ -68,21 +76,26 @@ theta0_list = []
 coefficients_list = []
 points_list = []
 
+# loop over data (each line is one simulation result)
 for i,line in enumerate(data):
   values = line.split(",")
+  
+  # parse values in line
   if "\n" in values[-1]:
     values[-1] = values[-1][0:values[-1].index("\n")]
-    
+  
+  # in first line, parse paramreters  
   if i == 0:
     parameters = values
-    [n, Rflex, L, rho, mu, simpson_iter, ver, reib, winkelkontrolle, t00, t01, t02, vx1, vy1, vx2, vy2] = map(float,parameters)
-    description = "parameters: \n n: {}, Rflex: {}, L: {}, rho: {}, mu: {}, \n simpson_iter: {}, verschiebung: {}, reib: {}, winkelkontrolle: {}, \n winkel:       t02 * t^2 + t01 * t + t00  mit  t00: {}, t01: {}, t02: {},\n verschiebung: v2 * t^2 + v1 * t          mit vx1: {}, vy1: {}, vx2: {}, vy2: {}".format(n, Rflex, L, rho, mu, simpson_iter, ver, reib, winkelkontrolle, t00, t01, t02, vx1, vy1, vx2, vy2)
+    [n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, t00, t01, t02, vx1, vy1, vx2, vy2] = map(float,parameters)
+    description = "parameters: \n n: {}, Rflex: {}, L: {}, rho: {}, mu: {}, \n verschiebung: {}, reib: {}, winkelkontrolle: {}, \n winkel:       t02 * t^2 + t01 * t + t00  mit  t00: {}, t01: {}, t02: {},\n verschiebung: v2 * t^2 + v1 * t          mit vx1: {}, vy1: {}, vx2: {}, vy2: {}".format(n, Rflex, L, rho, mu, ver, reib, winkelkontrolle, t00, t01, t02, vx1, vy1, vx2, vy2)
     continue
-      
+  
+  # if line contains only one entry, it is the last line
   elif len(values) == 1:
-    print("duration of simulation: {}s".format(values[0]))
     break  
   
+  # parse values and append to lists
   t = (float)(values[0])
   versch = map(float,values[1:3])
   theta0 = (float)(values[3])
@@ -93,20 +106,21 @@ for i,line in enumerate(data):
   theta0_list.append(theta0)
   coefficients_list.append(coefficients)
   
-  #print(coefficients)
-  
+  # append points of object line to list
   points_list.append(points(coefficients, parameters, versch, theta0))
   
 show_plots = True
 #if len(sys.argv) > 1:
 #  show_plots = False;
 
+# -----------------------------------------------
+# create static plot that shows states of object
 plt.rcParams.update({'font.size': 14})
 plt.rcParams['lines.linewidth'] = 2
 
 #fig = plt.figure(figsize=(10,3))  # exp2
 #fig = plt.figure(figsize=(2,4))   # exp1
-fig = plt.figure(figsize=(4,4))    # white2
+fig = plt.figure(figsize=(4,4))    # white2, tube
 plt.tight_layout()
 ax = plt.axes()
 #ax.grid(which='both')
@@ -140,7 +154,8 @@ plt.axes().set_aspect('equal', 'datalim')
 plt.savefig("a.png")
 #plt.show()
 
-# animate
+# -----------------------------------------------
+# create animation
 def update_line(i, line1, t, n):
   xlist = [x for [x,y] in points_list[i]]
   ylist = [y for [x,y] in points_list[i]]

@@ -4,22 +4,20 @@
 
 using namespace std;
 
-// Definition aller globalen Variablen, die intern für die Berechnung
-// als Zwischenspeicher verwendet werden
+// declaration of global variables that are used during computation
+extern double tend;                       //< end time of simulation
+extern vector<vector<vector<double>>> Am; //< A matrix, precomputed values to use for Y and Z
+extern vector<vector<vector<double>>> Bm; //< B matrix, precomputed values to use for Y and Z
+extern vector<vector<double>> Zm;         //< Z matrix
+extern vector<vector<double>> Km;         //< K matrix
+extern vector<vector<double>> Vm;         //< V matrix
+extern vector<vector<double>> Ym;         //< Y matrix
+extern vector<vector<double>> Mm;         //< M matrix
+extern vector<double> uV;                 //< u vector
+extern vector<double> wV;                 //< w vector
+extern vector<double> Adata;              //< buffer used for linear system solve
 
-extern double tend;
-extern vector<vector<vector<double>>> Am;
-extern vector<vector<vector<double>>> Bm;
-extern vector<vector<double>> Zm;
-extern vector<vector<double>> Km;
-extern vector<vector<double>> Vm;
-extern vector<vector<double>> Ym;
-extern vector<vector<double>> Mm;
-extern vector<double> uv;
-extern vector<double> verschv;
-extern vector<double> Adata;
-
-//Für Runge Kutta 4
+// variables needed for the Runge-Kutta-4 scheme
 extern vector<double> k1;
 extern vector<double> k2;
 extern vector<double> k3;

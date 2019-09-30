@@ -8,8 +8,8 @@ vector<vector<double>> Km;
 vector<vector<double>> Vm;
 vector<vector<double>> Ym;
 vector<vector<double>> Mm;
-vector<double> uv;
-vector<double> verschv;
+vector<double> uV;
+vector<double> wV;
 vector<double> Adata;
 
 //Für Runge Kutta 4

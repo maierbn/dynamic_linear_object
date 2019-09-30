@@ -4,14 +4,14 @@
 
 using namespace std;
 
-// Addition zweier Vektoren
+// vector addiotn
 vector<double> operator+(vector<double> a, vector<double> b);
 
-// Substraktion zweier Vektoren
+// vector substraction
 vector<double> operator-(vector<double> a, vector<double> b);
 
-// Matrix-Vektor-Multiplikation
+// matrix vector multiplication
 vector<double> multipl(vector<vector<double>> &A, vector<double> &x);
 
-// Skalierung eines Vektors
+// scaling of a vector
 vector<double> multipl(double a, vector<double> &b);

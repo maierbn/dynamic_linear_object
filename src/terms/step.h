@@ -5,7 +5,7 @@
 
 using namespace std;
 
-//berechnet einen Schritt einer Iteration zur Lösung der ODE
+// compute a single timestep of the timestepping iteration to solve the ODE
 vector<double> step(int n, double Rflex, double L, double rho, double mu,
-    bool ver, bool reib, bool winkelkontrolle, vector<double> &thetaN,
-    vector<double> &thetaNp, int iter, double t, string path);
+    bool enablePrescribedDisplacement, bool enableFriction, bool enablePrescribedAngle, vector<double> &thetaN,
+    vector<double> &thetaNp, double t, string path);

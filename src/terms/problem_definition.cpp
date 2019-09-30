@@ -5,7 +5,6 @@
 
 #include "terms/globals.h"
 
-//Für zusätzliche Bewegung und Kontrolle über den Winkel
 double vx2;
 double vx1;
 double vy2;
@@ -16,26 +15,25 @@ double t00;
 bool useLUTdisplacement;
 bool useLUTtheta;
 double LUTtimestepWidth;
-bool useSmoothFunction;
+bool enableSmoothVelocityProfile;
 std::vector<std::tuple<double,double,double>> displacementsX;
 std::vector<std::tuple<double,double,double>> displacementsY;
 std::vector<std::tuple<double,double,double>> thetas;
 
 using std::pow;
 
-//Start des Programms
-
-array<double,2> versch(double s, double t) {
-  //Gibt die aktuelle aufgebrachte Verschiebung zum Zeitpunkt t an
+// computes the current displacement
+array<double,2> displ(double s, double t)
+{
   array<double,2> out;
 
-  if (useLUTdisplacement)
+  if (useLUTdisplacement)    // use recorded data
   {
     double timeStepNo = t/LUTtimestepWidth;
     int index = int(timeStepNo);
     double alpha = timeStepNo - index;
 
-    // if there is no more data, repeat the last recorded value
+    // when there is no more data, repeat the last recorded value
     if (index+1 >= displacementsX.size())
     {
       index = displacementsX.size()-2;
@@ -45,7 +43,7 @@ array<double,2> versch(double s, double t) {
     out[0] = (1-alpha) * std::get<0>(displacementsX[index]) + alpha * std::get<0>(displacementsX[index+1]);
     out[1] = (1-alpha) * std::get<0>(displacementsY[index]) + alpha * std::get<0>(displacementsY[index+1]);
   }
-  else if (useSmoothFunction)
+  else if (enableSmoothVelocityProfile)    // superimpose the smooth velocity profile
   {
     double tt = t/tend;
     double s = pow(tt,4)*35. + pow(tt,5)*-84. + pow(tt,6)*70. + pow(tt,7)*-20.;
@@ -53,7 +51,7 @@ array<double,2> versch(double s, double t) {
     out[0] = s*vx1*tend;
     out[1] = s*vy1*tend;
   }
-  else
+  else   // normal quadratic function
   {
     out[0] = vx2 * t * t + vx1 * t;
     out[1] = vy2 * t * t + vy1 * t;
@@ -61,17 +59,18 @@ array<double,2> versch(double s, double t) {
   return out;
 }
 
-array<double,2> dversch(double s, double t) {
-  //Gibt die aktuelle 1. Ableitung der aufgebrachten Verschiebung zum Zeitpunkt t an
+// computes the derivative of the current displacement (=prescribed velocity)
+array<double,2> ddispl(double s, double t)
+{
   array<double,2> out;
 
-  if (useLUTdisplacement)
+  if (useLUTdisplacement)    // use recorded data
   {
     double timeStepNo = t/LUTtimestepWidth;
     int index = int(timeStepNo);
     double alpha = timeStepNo - index;
 
-    // if there is no more data, repeat the last recorded value
+    // when there is no more data, repeat the last recorded value
     if (index+1 >= displacementsX.size())
     {
       index = displacementsX.size()-2;
@@ -81,7 +80,7 @@ array<double,2> dversch(double s, double t) {
     out[0] = (1-alpha) * std::get<1>(displacementsX[index]) + alpha * std::get<1>(displacementsX[index+1]);
     out[1] = (1-alpha) * std::get<1>(displacementsY[index]) + alpha * std::get<1>(displacementsY[index+1]);
   }
-  else if (useSmoothFunction)
+  else if (enableSmoothVelocityProfile)    // superimpose the smooth velocity profile
   {
     double tt = t/tend;
     double ds = 1./tend * (pow(tt,3)*4*35. + pow(tt,4)*5*-84. + pow(tt,5)*6*70. + pow(tt,6)*7*-20.);
@@ -89,7 +88,7 @@ array<double,2> dversch(double s, double t) {
     out[0] = ds*vx1*tend;
     out[1] = ds*vy1*tend;
   }
-  else
+  else   // normal quadratic function
   {
     out[0] = vx2 * 2 * t + vx1;
     out[1] = vy2 * 2 * t + vy1;
@@ -97,17 +96,18 @@ array<double,2> dversch(double s, double t) {
   return out;
 }
 
-array<double,2> ddversch(double s, double t) {
-  //Gibt die aktuelle 2. Ableitung der aufgebrachten Verschiebung zum Zeitpunkt t an
+// computes the 2nd derivative of the current displacement (=prescribed acceleration)
+array<double,2> dddispl(double s, double t)
+{
   array<double,2> out;
 
-  if (useLUTdisplacement)
+  if (useLUTdisplacement)    // use recorded data
   {
     double timeStepNo = t/LUTtimestepWidth;
     int index = int(timeStepNo);
     double alpha = timeStepNo - index;
 
-    // if there is no more data, repeat the last recorded value
+    // when there is no more data, repeat the last recorded value
     if (index+1 >= displacementsX.size())
     {
       index = displacementsX.size()-2;
@@ -117,7 +117,7 @@ array<double,2> ddversch(double s, double t) {
     out[0] = (1-alpha) * std::get<2>(displacementsX[index]) + alpha * std::get<2>(displacementsX[index+1]);
     out[1] = (1-alpha) * std::get<2>(displacementsY[index]) + alpha * std::get<2>(displacementsY[index+1]);
   }
-  else if (useSmoothFunction)
+  else if (enableSmoothVelocityProfile)    // superimpose the smooth velocity profile
   {
     double tt = t/tend;
     double dds = 1./tend*1./tend * (pow(tt,2)*3*4*35. + pow(tt,3)*4*5*-84. + pow(tt,4)*5*6*70. + pow(tt,5)*6*7*-20.);
@@ -125,26 +125,24 @@ array<double,2> ddversch(double s, double t) {
     out[0] = dds*vx1*tend;
     out[1] = dds*vy1*tend;
   }
-  else
+  else   // normal quadratic function
   {
     out[0] = vx2 * 2;
     out[1] = vy2 * 2;
   }
   return out;
 }
-double Reibf(double s, double h, double rho) {
-  //Gibt die Reibung an der Stelle s in [0,L] an
-  /*
-  if(s<0.5){
-    return 0.0;
-  }
-  return 30-(s-0.5)*40;*/
+
+double frictionForce(double s, double h, double rho)
+{
+  //compute the friction force at coordinate s
   return 9.81 * rho * h;
 }
-double theta0(double t) {
-  //Gibt den aktuellen aufgebrachten Winkel im Ursprung zum Zeitpunkt t an
 
-  if (useLUTtheta)
+// current prescribed angle
+double theta0(double t)
+{
+  if (useLUTtheta)    // use recorded data
   {
     double timeStepNo = t/LUTtimestepWidth;
     int index = int(timeStepNo);
@@ -159,23 +157,23 @@ double theta0(double t) {
 
     return (1-alpha) * std::get<0>(thetas[index]) + alpha * std::get<0>(thetas[index+1]);
   }
-  else if (useSmoothFunction)
+  else if (enableSmoothVelocityProfile)    // superimpose the smooth velocity profile
   {
     double tt = t/tend;
     double s = pow(tt,4)*35. + pow(tt,5)*-84. + pow(tt,6)*70. + pow(tt,7)*-20.;
 
     return s*t01*tend + t00;
   }
-  else
+  else   // normal quadratic function
   {
     return t02 * t * t + t01 * t + t00;
   }
 }
 
-double theta0p(double t) {
-  //Gibt die 1. Ableitung des aktuellen aufgebrachten Winkels im Ursprung zum Zeitpunkt t an
-
-  if (useLUTtheta)
+// current 1st derivative of prescribed angle
+double theta0p(double t)
+{
+  if (useLUTtheta)    // use recorded data
   {
     double timeStepNo = t/LUTtimestepWidth;
     int index = int(timeStepNo);
@@ -190,23 +188,23 @@ double theta0p(double t) {
 
     return (1-alpha) * std::get<1>(thetas[index]) + alpha * std::get<1>(thetas[index+1]);
   }
-  else if (useSmoothFunction)
+  else if (enableSmoothVelocityProfile)    // superimpose the smooth velocity profile
   {
     double tt = t/tend;
     double ds = 1./tend * (pow(tt,3)*4*35. + pow(tt,4)*5*-84. + pow(tt,5)*6*70. + pow(tt,6)*7*-20.);
 
     return ds*t01*tend;
   }
-  else
+  else   // normal quadratic function
   {
     return t02 * 2 * t + t01;
   }
 }
 
-double theta0pp(double t) {
-  //Gibt die 2. Ableitung des aktuellen aufgebrachten Winkels im Ursprung zum Zeitpunkt t an
-
-  if (useLUTtheta)
+// current 2nd derivative of prescribed angle
+double theta0pp(double t)
+{
+  if (useLUTtheta)    // use recorded data
   {
     double timeStepNo = t/LUTtimestepWidth;
     int index = int(timeStepNo);
@@ -221,16 +219,15 @@ double theta0pp(double t) {
 
     return (1-alpha) * std::get<2>(thetas[index]) + alpha * std::get<2>(thetas[index+1]);
   }
-  else if (useSmoothFunction)
+  else if (enableSmoothVelocityProfile)    // superimpose the smooth velocity profile
   {
     double tt = t/tend;
     double dds = 1./tend*1./tend * (pow(tt,2)*3*4*35. + pow(tt,3)*4*5*-84. + pow(tt,4)*5*6*70. + pow(tt,5)*6*7*-20.);
 
     return dds*t01*tend;
   }
-  else
+  else   // normal quadratic function
   {
-
     return t02 * 2;
   }
 }

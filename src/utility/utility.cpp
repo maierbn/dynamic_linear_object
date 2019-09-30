@@ -6,42 +6,35 @@
 
 #include "terms/problem_definition.h"
 
-void plotteMatrix(vector<vector<double>> &Matrix) {
-//Plottet eine MxN Matrix
-  int imax = Matrix.size();
-  int jmax = Matrix[0].size();
-  for (int i = 0; i < imax; i++) {
-    for (int j = 0; j < jmax; j++) {
-      cout << Matrix[i][j] << " ";
-    }
-    cout << endl;
-  }
-
-}
-
-void save(vector<double> &x, double t, string path) {
-  //Speichert den Vektor x in einer csv Datei am Ort path
+// save vector x and time point t in a csv file at path
+void save(vector<double> &x, double t, string path)
+{
   ofstream file;
   file.open(path.c_str(), ios::out | ios::app);
-  if (!file.is_open()) {
-    cout << "Datei \"" << path << "\" konnte nicht geöffnet werden" << endl;
+  if (!file.is_open())
+  {
+    cout << "Could not write to file \"" << path << "\"!" << endl;
     return;
   }
-  array<double,2> verschiebung = versch(0,t);
-  file << t << "," << verschiebung[0] << "," << verschiebung[1] << "," << theta0(t);
+
+  array<double,2> displacement = displ(0,t);
+  file << t << "," << displacement[0] << "," << displacement[1] << "," << theta0(t);
   for (size_t i = 0; i < x.size(); ++i) {
     file << "," << x[i];
   }
-  file << "\n";
 
+  file << "\n";
+  file.close();
 }
 
-void save(double &x, string path) {
-  //Speichert den Wert x in einer csv Datei am Ort path
+// save vector x in a csv file at path
+void save(double &x, string path)
+{
   ofstream file;
   file.open(path.c_str(), ios::out | ios::app);
-  if (!file.is_open()) {
-    cout << "Datei \"" << path << "\" konnte nicht geöffnet werden" << endl;
+  if (!file.is_open())
+  {
+    cout << "Could not write to file \"" << path << "\"!" << endl;
     return;
   }
 
@@ -49,44 +42,50 @@ void save(double &x, string path) {
   file.close();
 }
 
+// save parameter values in a csv file at path
 void save(int n, double Rflex, double L, double rho, double mu,
-          int iter, bool ver, bool reib, bool winkelkontrolle, string path)
+          bool enablePrescribedDisplacement, bool enableFriction, bool enablePrescribedAngle, string path)
 {
-  //Speichert die Werte in der csv Datei am Ort path
   ofstream file;
   file.open(path.c_str(), ios::out | ios::app);
-  if (!file.is_open()) {
-    cout << "Datei \"" << path << "\" konnte nicht geöffnet werden" << endl;
+  if (!file.is_open())
+  {
+    cout << "Could not write to file \"" << path << "\"!" << endl;
     return;
   }
 
   file << n << "," << Rflex << "," << L << "," << rho << "," << mu << ","
-    << iter << "," << ver << "," << reib << "," << winkelkontrolle << ","
+    << enablePrescribedDisplacement << "," << enableFriction << "," << enablePrescribedAngle << ","
     << t00 << "," << t01 << "," << t02 << "," << vx1 << "," << vy1 << ","
     << vx2 << "," << vy2 << "\n";
 
   file.close();
 }
 
-void finish(std::chrono::time_point<std::chrono::steady_clock> t1, string path) {
-  //Speichert die Zeitdifferent aus t1 und der aktuellen Zeit in einer csv Datei am Ort path
+// save duration computed from current time and t1 in csv file at path
+void finalize(std::chrono::time_point<std::chrono::steady_clock> t1, string path)
+{
+  // open file
   ofstream file;
   file.open(path.c_str(), ios::out | ios::app);
   if (!file.is_open()) {
-    cout << "Datei \"" << path << "\" konnte nicht geöffnet werden" << endl;
+    cout << "Could not write to file \"" << path << "\"!" << endl;
     return;
   }
+
+  // compute time difference between now and t1
   auto now = std::chrono::steady_clock::now();
   auto t2 = std::chrono::duration_cast<chrono::milliseconds>(now - t1).count();
   file << t2/1000.0;
   file.close();
 
-  cout << "Dauer: " << t2 << " ms" << endl;
+  cout << "Duration: " << t2 << " ms" << endl;
 }
 
+// Load look-up table containing prescribed displacements and angles for the gripper position
 void loadLUT(std::string path)
 {
-  //File format is csv based with separator ",", each line contains: t,x,y,theta,x',y',theta',x'',y'',theta'' (i.e. also 1st and 2nd derivatives)
+  // File format is csv based with separator ",", each line contains: t,x,y,theta,x',y',theta',x'',y'',theta'' (i.e. also 1st and 2nd derivatives)
   ifstream file(path);
   if (!file.is_open())
   {

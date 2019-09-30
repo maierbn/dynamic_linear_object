@@ -4,94 +4,86 @@
 
 using namespace std;
 
-//Hütchenfunktion bzw lineare Basisfunktion -> 1 für i*h, linear abfallend auf 0 zu (i-1)*h, (i+1)*h, ansonsten konstant 0
+// linear hat function, Eq. (3)
 double N(int i, double h, double hInv, double s);
 
-//Theta gibt anhand Lineakombination der N+1 Koeffizienten mit den jeweiligen Basisfunktionen
-//den Wert von Theta an der Stelle s zurück
+// discretized angle
 double Theta(const vector<double> &thetaN, double h, double hInv, double s);
 
-//Berechnet das Integral über den Cosinus von Theta multipliziert mit der i-ten Basisfunktion
-double CosInt(int i, double s, double h, double hInv, const vector<double> &thetaN,
-    int iter);
+// compute integral over cosine of theta, multiplied with ith basis function, Eq. (7.1)
+double CosInt(int i, double s, double h, double hInv, const vector<double> &thetaN);
 
-//Berechnet das Integral über den Sinus von Theta multipliziert mit der i-ten Basisfunktion
-double SinInt(int i, double s, double h, double hInv, const vector<double> &thetaN,
-    int iter);
+// compute integral over sine of theta, multiplied with ith basis function, Eq. (7.2)
+double SinInt(int i, double s, double h, double hInv, const vector<double> &thetaN);
 
-//Berechnet den Wert m_(i,k) aus Gleichung 14
+// entry of mass matrix, m_(i,k), Eq. (6.1)
 double m(int i, int k, double rho, double h, double hInv, const vector<double> &thetaN,
-    double l, int iter);
+    double l);
 
-//Berechnet die Ableitung der Funktion SInInt  nach thetar
-double dSinInt(int i, int r, double s, double h, double hInv, const vector<double> &thetaN,
-    int iter);
+// dSinInt/dTheta
+double dSinInt(int i, int r, double s, double h, double hInv, const vector<double> &thetaN);
 
-//Berechnet die Ableitung der Funktion CosInt nach thetar
-double dCosInt(int i, int r, double s, double h, double hInv, const vector<double> &thetaN,
-    int iter);
+// dCosInt/dTheta
+double dCosInt(int i, int r, double s, double h, double hInv, const vector<double> &thetaN);
 
-//Berechnet für alle i,k,r das Integral über dSinInt(i,r)*SinInt(k) zur Wiederverwendung
+// compute the integral over dSinInt(i,r)*SinInt(k) for reuse, for all i,k,r
 void computeMatrixA(double l, double h, double hInv, int n,
-    vector<double> &thetaN, int iter);
+    vector<double> &thetaN);
 
-//Berechnet für alle i,k,r das Integral über dCosInt(i,r)*CosInt(k) zur Wiederverwendung
+// compute the integral over dCosInt(i,r)*CosInt(k) for reuse, for all i,k,r
 void computeMatrixB(double l, double h, double hInv, int n,
-    vector<double> &thetaN, int iter);
+    vector<double> &thetaN);
 
-//Berechnet die Steifigkeitsmatrix des Kabels mit N Stützstellen mit Abstand h und der Steifigkeit RFlex
+// compute the stiffness matrix K
 void computeMatrixK(int n, double RFlex, double h, double hInv);
 
-//Berechnet die Ableitung der Funktion m(i,k) nach Theta_r
+// compute the derivative of m(i,k) w.r.t Theta_r
 double dm(int i, int k, int r, double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B);
 
-//Berechnet den Wer Z aus Gleichung 16
+// compute Z_r,k, Eq. (6.2)
 double Z(int r, int k, vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B);
 
-//Berechnet den Wer Y aus Gleichung 16
+// compute Y_r,k, Eq. (6.3)
 double Y(int r, int k, vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B);
 
-//Berechnet die Matrix M, mit Mij = m(i,j,...)
+// compute mass matrix M with M_ij = m(i,j,...)
 void computeMatrixM(double rho, double h, double hInv, vector<double> &thetaN,
-    double l, int iter);
+    double l);
 
-//Berechnet die Matrix Z, mit Zij = Z(i,j,...)
+// compute matrix Z, with Z_ij = Z(i,j,...)
 void computeMatrixZ(vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B);
 
-//Berechnet die Matrix Y, mit Yij = Y(i,j,...)
+// compute matrix Y, with Y_ij = Y(i,j,...)
 void computeMatrixY(vector<double> &thetaN, vector<double> &thetaNp,
     double rho, vector<vector<vector<double>>> &A,
     vector<vector<vector<double>>> &B);
 
-//Berechnet den Wert V aus Gleichung 33
+// compute entry V_rj, Eq. (11)
 double V(int r, int j, vector<double> &thetaN, vector<double> &thetaNp,
-    int iter, double h, double hInv, double mu, double t, double rho);
-
-//Berechnet die Matrix V, mit Vij = V(i,j,...)
-void computeMatrixV(vector<double> &thetaN, vector<double> &thetaNp,
-    double h, double hInv, double l, double mu, double t, int iter, double rho);
-
-//Berechnet den Wert u aus Gleichung 34
-double u(int r, vector<double> &thetaN, vector<double> &thetaNp, int iter,
     double h, double hInv, double mu, double t, double rho);
 
-//Berechnet den Vektor u mit ui= u(i,...)
-vector<double> uVek(vector<double> &thetaN, vector<double> &thetaNp, double h,
-    double hInv, double l, double mu, double t, int iter, double rho);
+// compute matrix V, with V_ij = V(i,j,...)
+void computeMatrixV(vector<double> &thetaN, vector<double> &thetaNp,
+    double h, double hInv, double l, double mu, double t, double rho);
 
-//Berechnet den Vektor v aus Gleichung 25
-vector<double> verschVek(vector<double> &thetaN, vector<double> &thetaNp,
-    double h, double hInv, double l, double t, double rho, int iter);
+// compute entry u_r, Eq. (12)
+double u(int r, vector<double> &thetaN, vector<double> &thetaNp,
+    double h, double hInv, double mu, double t, double rho);
 
-//Verändert die Massenmatrix so, dass sich der erste Winkel nur aus der gegebenen Funktion berechnet
-vector<vector<double>> convertMMatrix(vector<vector<double>> A);
+// compute the vector u with u_i= u(i,...)
+vector<double> uVector(vector<double> &thetaN, vector<double> &thetaNp, double h,
+    double hInv, double l, double mu, double t, double rho);
 
-//Verändert die Massenmatrix so, dass sich der erste Winkel nur aus der gegebenen Funktion berechnet
+// compute vector w, Eq. (9)
+vector<double> wVector(vector<double> &thetaN, vector<double> &thetaNp,
+    double h, double hInv, double l, double t, double rho);
+
+// adjust mass matrix M, such that the first angle, \theta_0 is given by the prescribed angle function in problem_definition.cpp
 void convertMMatrix();
